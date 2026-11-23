@@ -1,0 +1,8 @@
+## Interface: 16001
+## Title: AddonSim Recorder
+## Notes: Records quest, place and fight events with the state that goes with them, for AddonSim to replay. /asrec to start, stop and clear.
+## Author: AddonSim
+## Version: 1.0
+## SavedVariables: AddonSimRecording
+
+AddonSimRecorder.lua

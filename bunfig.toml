@@ -1,0 +1,8 @@
+# The page is served straight from its sources: Bun transpiles the React code and builds Tailwind's CSS as it serves
+# them (no build step, no bundler config of our own)
+[serve.static]
+plugins = ["bun-plugin-tailwind"]
+env = "BUN_PUBLIC_*"
+
+[test]
+root = "src"

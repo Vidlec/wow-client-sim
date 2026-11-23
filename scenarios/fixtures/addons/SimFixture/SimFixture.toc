@@ -1,0 +1,7 @@
+## Interface: 16001
+## Title: SimFixture
+## Notes: The simulator's own test addon: a window with a scrolling list, marks on the minimap, a slash command, saved variables. Its scenarios (AddonSim/scenarios) test the simulator with it.
+## Version: 1.0
+## SavedVariables: SimFixtureDB
+
+SimFixture.lua

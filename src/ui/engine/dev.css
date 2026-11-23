@@ -1,0 +1,10 @@
+/* The page's reset, as the real page has it (Tailwind's preflight reaches into the game screen) */
+@import "tailwindcss";
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background: #0f1114;
+}

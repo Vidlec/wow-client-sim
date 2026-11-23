@@ -1,0 +1,5 @@
+/* HeroUI's theme variables once more, as written. Tailwind's colour fallback swaps a color-mix() of a variable it
+   does not know for its first colour, so through styles.css the soft and hover colours (--accent-soft and the rest)
+   came out as the plain colours: chips and soft buttons lost their text. This file is not Tailwind's (nothing in it
+   is), so Bun serves it as it is, and coming after styles.css its values win in the same layer. */
+@import "@heroui/styles/themes/default/variables.css";

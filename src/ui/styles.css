@@ -1,0 +1,40 @@
+/* The page's styles: Tailwind and HeroUI, HeroUI's dark theme tuned to a calm developer tool with a little of the
+   game's gold, and the few pieces Tailwind's classes do not say well (the rail, the floating windows, the pad) */
+@import "tailwindcss";
+@import "@heroui/styles";
+
+@source "./";
+
+.dark,
+[data-theme="dark"] {
+  --background: #0d0f12;
+  --surface: #161a1f;
+  --surface-secondary: #1c2026;
+  --surface-tertiary: #22272e;
+  --overlay: #1a1e24;
+  --border: #2a3039;
+  --separator: #222830;
+  --accent: #4c9aff;
+  --accent-foreground: #0d0f12;
+  --field-background: #101317;
+  --field-border: #2a3039;
+  --radius: 0.5rem;
+  /* the game's gold and the page's own glows */
+  --gold: #ffd100;
+  --coin: #f2cf4a;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  height: 100%;
+}

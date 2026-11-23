@@ -1,0 +1,103 @@
+/* The game screen's own styles, scoped under the element it is drawn in (.as-engine). The page's reset (Tailwind's)
+   reaches in too: what the game's drawing needs is set here again (inline icons are inline, not blocks). */
+.as-engine .as-viewport {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #07080a;
+}
+.as-engine .as-viewport.is-magnified {
+  overflow: auto;
+}
+/* The magnified screen's room, for the viewport to scroll over (the screen itself is transformed: it takes none) */
+.as-engine .as-sizer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.as-engine .as-screen {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  overflow: hidden;
+  outline: none;
+  cursor: default;
+  background: radial-gradient(ellipse at 50% 40%, #2f4a37, #182419 70%, #0d130e);
+  user-select: none;
+  font:
+    13px / 1.45 Inter,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+}
+.as-engine .as-screen:focus {
+  box-shadow: inset 0 0 0 2px #4c9aff66;
+}
+.as-engine .as-layer,
+.as-engine .as-world,
+.as-engine .as-inspect {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.as-engine .as-gl {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
+
+/* The page's elements as the renderer (renderers/dom.ts), on the screen and on the picture pages */
+.as-engine .as-layer > * {
+  position: absolute;
+  pointer-events: none;
+}
+.as-engine .fs {
+  display: flex;
+  flex-direction: column;
+  white-space: pre;
+  overflow: visible;
+}
+.as-engine .fs > div {
+  flex: none;
+  overflow: visible;
+}
+.as-engine .fs img {
+  display: inline;
+  max-width: none;
+  vertical-align: middle;
+}
+.as-engine .bd > * {
+  position: absolute;
+  background-repeat: no-repeat;
+}
+.as-engine .cursor::after {
+  content: "|";
+  animation: as-blink 1s steps(1) infinite;
+  margin-left: 1px;
+}
+@keyframes as-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* The inspector's boxes: every frame under the mouse, the top one pink; one pointed at in the list, yellow */
+.as-engine .as-inspect > div {
+  position: absolute;
+  border: 1px solid #00e0ff;
+  background: #00e0ff14;
+}
+.as-engine .as-inspect > div:first-child {
+  border-color: #ff4fd8;
+  background: #ff4fd814;
+}
+.as-engine .as-inspect > div.picked {
+  outline: 2px solid #ffd100;
+  background: #ffd10022;
+}

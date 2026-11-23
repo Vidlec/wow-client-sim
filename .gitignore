@@ -1,0 +1,25 @@
+# Installed by bun install
+node_modules/
+
+# The game's files, downloaded and built on first start (gigabytes), and the interface source the setup downloads
+cache/
+interface/
+
+# The addons' saved variables and the simulator's own state, per machine
+saved/
+
+# What `bun run build` makes
+dist/
+
+# What the scenario runner leaves behind: the last run's scenes, its times, coverage, the client API report
+scenarios/.last-run/
+scenarios/.coverage/
+scenarios/.timings.json
+api-report.txt
+
+# Machine-local: the old config.json (read once into the user's settings), an editor tool's local state
+config.json
+.impeccable/
+
+# A stray empty file a run once left at the root
+/QuestText.lua

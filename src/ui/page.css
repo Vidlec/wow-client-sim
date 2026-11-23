@@ -1,0 +1,550 @@
+/* The page's own pieces, which Tailwind's classes do not say well: the header, the rail, the floating windows, the
+   cards with the game's flair, the virtual pad. Not Tailwind's file (like theme.css), so its color-mix() of HeroUI's
+   variables reach the browser as written. */
+
+/* The header: a faint gold line along its foot, the brand's mark a coin */
+.app-header {
+  background: linear-gradient(180deg, #14181d 0%, #101317 100%);
+  box-shadow: inset 0 -1px 0 color-mix(in oklab, var(--gold) 10%, transparent);
+}
+.brand-mark {
+  background: radial-gradient(circle at 30% 25%, #fff3b0, var(--coin) 45%, #8a6a12 110%);
+  color: #1b1405;
+  box-shadow: 0 0 12px color-mix(in oklab, var(--coin) 35%, transparent);
+}
+
+/* The rail: icons, the shown one lit with a bar and a soft glow */
+.app-rail {
+  background: #0f1215;
+}
+.rail-button {
+  position: relative;
+  color: var(--muted);
+}
+.rail-button.is-on {
+  color: var(--foreground);
+  background: var(--accent-soft);
+}
+.rail-button.is-on::before {
+  content: "";
+  position: absolute;
+  left: -9px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+}
+.rail-badge {
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+.rail-rule {
+  width: 24px;
+  height: 1px;
+  margin: 4px 0;
+  background: var(--separator);
+}
+
+/* The side panel and its head */
+.side-panel {
+  background: var(--background);
+}
+.panel-head-icon {
+  background: linear-gradient(135deg, var(--accent-soft), transparent);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 25%, transparent);
+}
+.side-resizer {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 5;
+}
+.side-resizer:hover {
+  background: color-mix(in oklab, var(--accent) 40%, transparent);
+}
+.floating-panel {
+  background: color-mix(in oklab, var(--background) 92%, transparent);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 18px 50px #000a;
+  resize: both;
+  min-width: 320px;
+  min-height: 220px;
+  max-width: calc(100% - 16px);
+  max-height: calc(100% - 16px);
+}
+.section-card {
+  background: var(--surface);
+  border: 1px solid var(--separator);
+  box-shadow: none;
+}
+
+/* The strip under the game */
+.status-strip {
+  background: #0f1215;
+}
+.status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: 1px;
+}
+.status-dot.is-live {
+  background: var(--success);
+  box-shadow: 0 0 6px var(--success);
+}
+.status-dot.is-paused {
+  background: var(--warning);
+}
+.ticker-event.is-newest {
+  animation: ticker-in 0.4s ease-out;
+}
+@keyframes ticker-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+/* The pause button breathes while the clock stands */
+.pulse-ring {
+  animation: pulse-ring 1.8s ease-in-out infinite;
+}
+@keyframes pulse-ring {
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 30%, transparent);
+  }
+}
+
+/* Gold: quest titles, headings in the game's colour */
+.text-gold {
+  color: var(--gold);
+}
+.quest-title {
+  color: var(--gold);
+  text-shadow: 0 1px 0 #000;
+}
+
+/* The virtual gamepad */
+.vpad {
+  background: var(--overlay);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 18px 50px #000a;
+  user-select: none;
+}
+.vpad-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 12px;
+  border-bottom: 1px solid var(--separator);
+  cursor: move;
+  font-weight: 600;
+  font-size: 13px;
+}
+.vpad-hint {
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--muted);
+}
+.vpad-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--separator);
+  background: var(--warning-soft);
+  font-size: 12px;
+}
+.vpad-body {
+  padding: 10px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.vpad-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.vpad-pair,
+.vpad-menu {
+  display: flex;
+  gap: 6px;
+}
+.vpad-btn {
+  height: 28px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--foreground);
+  background: var(--surface-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background 0.08s,
+    transform 0.08s;
+}
+.vpad-btn:hover {
+  background: var(--surface-tertiary);
+}
+.vpad-btn.is-down {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  transform: scale(0.95);
+}
+.vpad-btn.is-held {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.vpad-trigger {
+  width: 44px;
+  border-radius: 10px 10px 6px 6px;
+}
+.vpad-shoulder {
+  width: 52px;
+  border-radius: 8px 8px 4px 4px;
+}
+.vpad-small {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11px;
+  border-radius: 12px;
+}
+.vpad-cross,
+.vpad-face {
+  position: relative;
+  width: 96px;
+  height: 96px;
+}
+.vpad-dir {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 11px;
+}
+.vpad-dir.up {
+  left: 32px;
+  top: 0;
+}
+.vpad-dir.down {
+  left: 32px;
+  top: 64px;
+}
+.vpad-dir.left {
+  left: 0;
+  top: 32px;
+}
+.vpad-dir.right {
+  left: 64px;
+  top: 32px;
+}
+.vpad-round {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 13px;
+}
+.vpad-round.y {
+  left: 31px;
+  top: 0;
+  color: #f2cf4a;
+}
+.vpad-round.a {
+  left: 31px;
+  top: 62px;
+  color: #79d17a;
+}
+.vpad-round.x {
+  left: 0;
+  top: 31px;
+  color: #6fa8ff;
+}
+.vpad-round.b {
+  left: 62px;
+  top: 31px;
+  color: #ff8a80;
+}
+.vpad-sticks {
+  justify-content: space-around;
+}
+.vpad-stickbox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.vpad-stick {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #0c0e11 40%, var(--field-background));
+  border: 1px solid var(--border);
+  cursor: grab;
+  touch-action: none;
+}
+.vpad-stick.is-dragging {
+  cursor: grabbing;
+  border-color: var(--accent);
+}
+.vpad-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  border-radius: 50%;
+  background: var(--surface-tertiary);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 6px #0008;
+  pointer-events: none;
+}
+.vpad-stick.is-dragging .vpad-knob {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+/* A chosen toggle stands out (the input switch, zoom, renderer) */
+.toggle-button[data-selected="true"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* A quest of the log: a parchment-dark card; a finished one glows faintly green */
+.quest-card {
+  background: linear-gradient(180deg, #181b20, #14171b);
+  border-color: var(--separator);
+}
+.quest-card.is-complete {
+  border-color: color-mix(in oklab, var(--success) 35%, transparent);
+  box-shadow: 0 0 18px -8px var(--success);
+}
+
+/* The gossip window: dark parchment, a gold rule under the giver's name */
+.gossip-dialog {
+  background: radial-gradient(120% 60% at 50% 0%, #3a2f1a55, transparent 70%), var(--overlay);
+  border: 1px solid #5a4a2a88;
+}
+.gossip-dialog [data-slot="modal-header"],
+.gossip-dialog header {
+  border-bottom: 1px solid #ffd10033;
+  padding-bottom: 10px;
+}
+
+/* Your addons: one switched on carries a faint accent edge */
+.addon-card {
+  background: var(--surface);
+  border-color: var(--separator);
+}
+.addon-card.is-on {
+  border-color: color-mix(in oklab, var(--accent) 30%, var(--separator));
+  background:
+    linear-gradient(90deg, color-mix(in oklab, var(--accent) 6%, transparent), transparent 40%), var(--surface);
+}
+
+/* Errors: a dark red card */
+.error-card {
+  background: linear-gradient(180deg, #2a1416, #1a1112);
+  border-color: color-mix(in oklab, var(--danger) 35%, transparent);
+}
+
+/* The inspector's rows and the events' list */
+.inspect-row.is-open {
+  background: var(--accent-soft);
+}
+.events-list {
+  height: calc(100vh - 250px);
+  min-height: 240px;
+}
+.event-row:hover {
+  background: var(--surface-secondary);
+}
+.chat-log {
+  height: calc(100vh - 230px);
+  min-height: 240px;
+}
+.lua-editor {
+  background: #0b0d10;
+}
+
+/* Tabs kept mounted (what was typed in them stays): the ones not shown are out of the way */
+.tabs__panel[inert] {
+  display: none;
+}
+
+/* A party member's card, tinted by their class (--class-color, set on the card) */
+.member-card {
+  background:
+    radial-gradient(110% 80% at 0% 0%, color-mix(in oklab, var(--class-color) 14%, transparent), transparent 60%),
+    var(--surface);
+  border-color: color-mix(in oklab, var(--class-color) 28%, var(--separator));
+}
+
+/* The first-run setup: a night sky of the game's gold and blue behind a calm card */
+.setup-screen {
+  background:
+    radial-gradient(60% 50% at 20% 0%, color-mix(in oklab, var(--coin) 16%, transparent), transparent 70%),
+    radial-gradient(50% 60% at 100% 100%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 70%),
+    var(--background);
+}
+.setup-mark {
+  box-shadow: 0 0 40px color-mix(in oklab, var(--coin) 45%, transparent);
+  animation: setup-float 4s ease-in-out infinite;
+}
+@keyframes setup-float {
+  50% {
+    transform: translateY(-4px);
+  }
+}
+.setup-card {
+  background: color-mix(in oklab, var(--surface) 92%, transparent);
+  border: 1px solid var(--separator);
+  backdrop-filter: blur(8px);
+}
+.setup-step:hover {
+  background: var(--surface-secondary);
+}
+.setup-step.is-current {
+  background: var(--accent-soft);
+}
+.setup-step-dot {
+  background: var(--surface-tertiary);
+  color: var(--muted);
+}
+.setup-step.is-current .setup-step-dot {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+.setup-step-dot.is-done,
+.setup-step.is-current .setup-step-dot.is-done {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.setup-choice {
+  background: var(--surface-secondary);
+  border-color: var(--separator);
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+.setup-choice:hover {
+  border-color: var(--border);
+}
+.setup-choice.is-chosen {
+  border-color: color-mix(in oklab, var(--success) 50%, transparent);
+  background: color-mix(in oklab, var(--success) 7%, var(--surface-secondary));
+}
+.flavour-card {
+  background:
+    radial-gradient(80% 120% at 100% 0%, color-mix(in oklab, var(--coin) 12%, transparent), transparent 60%),
+    var(--surface-secondary);
+}
+.download-box {
+  background: var(--surface-secondary);
+  border-color: var(--separator);
+}
+.enter-button:not([data-disabled="true"]) {
+  box-shadow: 0 0 24px color-mix(in oklab, var(--accent) 50%, transparent);
+}
+
+/* The fight: bars as the game's unit frames draw them (a dark trough, a glossy fill) */
+.game-bar {
+  background: #0b0d10;
+  box-shadow: inset 0 0 0 1px #000a;
+}
+.game-bar-fill {
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--bar-color) 75%, #fff) 0%,
+    var(--bar-color) 45%,
+    color-mix(in oklab, var(--bar-color) 70%, #000) 100%
+  );
+  transition: width 0.25s ease-out;
+}
+.combo-point {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #2a2f37;
+  box-shadow: inset 0 0 0 1px #000;
+}
+.combo-point.is-lit {
+  background: radial-gradient(circle at 35% 30%, #fff6a0, #ffb300 60%);
+  box-shadow: 0 0 6px #ffb300aa;
+}
+.player-card {
+  background: var(--surface);
+  border-color: var(--separator);
+}
+.player-card.is-fighting {
+  border-color: color-mix(in oklab, var(--danger) 45%, transparent);
+  box-shadow: 0 0 22px -8px var(--danger);
+}
+.enemy-card {
+  background: linear-gradient(180deg, #1b1416, #141215);
+  border-color: var(--separator);
+}
+.enemy-card.is-target {
+  border-color: #ffd10088;
+  box-shadow: 0 0 16px -6px #ffd100;
+}
+.enemy-card.is-elite {
+  background:
+    radial-gradient(90% 70% at 100% 0%, #ffd1001a, transparent 60%), linear-gradient(180deg, #1d1712, #141215);
+}
+.enemy-card.is-dead {
+  opacity: 0.6;
+  filter: grayscale(0.6);
+}
+.action-slot {
+  position: relative;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  border: 1px solid #000;
+  background: linear-gradient(180deg, #2c313a, #1a1d22);
+  box-shadow: inset 0 0 0 1px #ffffff14;
+  font:
+    600 11px / 1 ui-monospace,
+    monospace;
+  color: var(--muted);
+  cursor: pointer;
+  overflow: hidden;
+}
+.action-slot:hover {
+  color: var(--foreground);
+  box-shadow: inset 0 0 0 1px #ffd10066;
+}
+.action-slot:active {
+  transform: scale(0.94);
+}
+.action-slot-gcd {
+  position: absolute;
+  inset: 0;
+  background: #000a;
+}
+.aura.is-harmful .spell-icon {
+  box-shadow: 0 0 0 1px #d42b20;
+}
+.loot-dialog {
+  background: radial-gradient(120% 60% at 50% 0%, #3a2f1a55, transparent 70%), var(--overlay);
+}

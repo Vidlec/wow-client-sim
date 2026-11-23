@@ -1,0 +1,46 @@
+{
+  "name": "addonsim",
+  "private": true,
+  "version": "0.2.0",
+  "description": "Run WoW Forever addons in the browser, for developing them",
+  "type": "module",
+  "exports": {
+    ".": "./src/sdk/index.ts",
+    "./results": "./src/project/results.ts"
+  },
+  "bin": {
+    "addonsim": "./src/cli/main.ts"
+  },
+  "scripts": {
+    "start": "bun run src/server/main.ts",
+    "build": "bun run src/cli/build.ts",
+    "dev": "bun --watch run src/server/main.ts",
+    "play": "bun run src/cli/play.ts",
+    "shots": "bun run src/cli/shots.ts",
+    "coverage": "bun run src/cli/coverage.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "wowless": "bun run src/cli/wowless.ts"
+  },
+  "dependencies": {
+    "@gravity-ui/icons": "^2.23.1",
+    "@heroui/react": "^3.2.8",
+    "@heroui/styles": "^3.2.8",
+    "@internationalized/date": "^3.12.4",
+    "react": "^19.3.1",
+    "react-aria": "^3.53.1",
+    "react-aria-components": "^1.22.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.8",
+    "@types/bun": "^1.4.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "bun-plugin-tailwind": "^0.1.2",
+    "tailwindcss": "^4.3.5",
+    "typescript": "7"
+  }
+}
