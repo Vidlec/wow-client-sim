@@ -9,15 +9,24 @@ wait(0.5)
 
 local events = {}
 local listener = G.CreateFrame("Frame")
-for _, name in ipairs({ "PLAYER_STARTED_MOVING", "PLAYER_STOPPED_MOVING", "PLAYER_STARTED_TURNING", "PLAYER_STOPPED_TURNING" }) do
+for _, name in ipairs({
+    "PLAYER_STARTED_MOVING",
+    "PLAYER_STOPPED_MOVING",
+    "PLAYER_STARTED_TURNING",
+    "PLAYER_STOPPED_TURNING",
+}) do
     listener:RegisterEvent(name)
 end
-listener:SetScript("OnEvent", function(_, event) events[#events + 1] = event end)
+listener:SetScript("OnEvent", function(_, event)
+    events[#events + 1] = event
+end)
 local function yardsFrom(start)
     local _, north, west = game.getPlayerWorldPosition()
     return math.sqrt((north - start[2]) ^ 2 + (west - start[3]) ^ 2)
 end
-local function here() return { game.getPlayerWorldPosition() } end
+local function here()
+    return { game.getPlayerWorldPosition() }
+end
 
 -- Running: 2 seconds of W is 14 yards
 local start = here()
@@ -32,7 +41,10 @@ wait(0.1)
 expect(G.IsPlayerMoving() == false, "stopped when W came up")
 local ran = yardsFrom(start)
 expect(math.abs(ran - 14) < 0.8, string.format("2 seconds of running is 14 yards (ran %.1f)", ran))
-expect(events[1] == "PLAYER_STARTED_MOVING" and events[#events] == "PLAYER_STOPPED_MOVING", "the movement events, in order")
+expect(
+    events[1] == "PLAYER_STARTED_MOVING" and events[#events] == "PLAYER_STOPPED_MOVING",
+    "the movement events, in order"
+)
 
 -- Backwards is slower
 start = here()
@@ -49,17 +61,24 @@ expect(math.abs(turned - 90) < 6, string.format("half a second of turning is abo
 -- Walking to a point: it gets there at running speed
 local _, north, west = game.getPlayerWorldPosition()
 local targetX, targetY = 0.50, 0.33
-local continentId, targetNorth, targetWest = game.mapToWorld(1413, targetX, targetY)
+local _, targetNorth, targetWest = game.mapToWorld(1413, targetX, targetY)
 local distance = math.sqrt((targetNorth - north) ^ 2 + (targetWest - west) ^ 2)
 local seconds = walkTo(1413, targetX, targetY)
-expect(math.abs(seconds - distance / 7) < 1, string.format("%.0f yards took %.1f seconds, at 7 a second", distance, seconds))
-expect(math.abs(game.profile.x - targetX) < 0.002 and math.abs(game.profile.y - targetY) < 0.002, "it stands on the point")
+expect(
+    math.abs(seconds - distance / 7) < 1,
+    string.format("%.0f yards took %.1f seconds, at 7 a second", distance, seconds)
+)
+expect(
+    math.abs(game.profile.x - targetX) < 0.002 and math.abs(game.profile.y - targetY) < 0.002,
+    "it stands on the point"
+)
 
 -- Auto-run keeps going without a key; S stops it
 start = here()
 key("NUMLOCK")
 wait(1)
 expect(G.IsPlayerMoving() == true, "auto-run moves without a key held")
+expect(yardsFrom(start) > 2, "auto-run covers ground (" .. math.floor(yardsFrom(start)) .. " yards in a second)")
 hold("S", 0.1)
 wait(0.5)
 expect(G.IsPlayerMoving() == false, "pressing S ends auto-run")
@@ -80,5 +99,7 @@ sim.clickToWalk = false
 local after = here()
 local walkedNorth = after[2] - before[2]
 local expected = G.C_Minimap.GetViewRadius() / 2
-expect(math.abs(walkedNorth - expected) < 2 and math.abs(after[3] - before[3]) < 2,
-    string.format("a click half way up the minimap walks %.0f yards north (walked %.0f)", expected, walkedNorth))
+expect(
+    math.abs(walkedNorth - expected) < 2 and math.abs(after[3] - before[3]) < 2,
+    string.format("a click half way up the minimap walks %.0f yards north (walked %.0f)", expected, walkedNorth)
+)

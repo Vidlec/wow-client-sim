@@ -48,8 +48,8 @@ export const PartyPanel = () => {
       )}
 
       <p className="text-xs leading-relaxed text-muted">
-        A member's addon may send its counts on its own channel, inside dungeons too (Questie's, or one a project's
-        plugin adds); the game itself shows everyone's progress outside dungeons only.
+        A member's addon may send its counts on its own channel, inside dungeons too (the addons a project's plugins
+        add); the game itself shows everyone's progress outside dungeons only.
       </p>
 
       <InviteModal

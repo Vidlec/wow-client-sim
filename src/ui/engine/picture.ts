@@ -1,23 +1,23 @@
-// The picture pages: a saved scene drawn once, nothing live (no socket, no controller). src/cli/shots.ts and the
-// scenario runner's links depend on these addresses and on the title saying "ready".
+// The picture pages: a saved scene drawn once, nothing live (no socket, no controller), by the same renderer as the
+// live screen (renderers/renderer.ts). src/sdk/shots.ts and src/cli/shots.ts load them in headless Chrome and take the
+// picture once the title says "ready"; the scenario runner's links open them too.
 //
-//   ?shot=path            one saved scene alone, at its own size and nothing round it, for headless Chrome to take a
-//                         picture of. &backdrop=<texture> puts a picture of the game's behind it, as the world would
-//                         be (a loading screen: "Interface\Glues\LoadingScreens\LoadScreenBarrens"); &crop=x,y,w,h
-//                         shows only that part of the screen; &renderer=gl draws it with the GPU's renderer (else the
-//                         page's elements). The title says "ready" once its art has arrived ("missing": no scene).
+//   ?shot=path            one saved scene alone, at its own size and nothing round it. &backdrop=<texture> puts a
+//                         picture of the game's behind it, as the world would be (a loading screen:
+//                         "Interface\Glues\LoadingScreens\LoadScreenBarrens"); &crop=x,y,w,h shows only that part of
+//                         the screen. The title says "ready" once its art has arrived and the GPU has drawn it
+//                         ("missing": no scene; "no gpu": the browser has no WebGPU).
 //   ?compare=a|b          two saved scenes side by side (the reference and now), each with what differs outlined;
 //                         one alone with ?compare=a. &scale= draws them larger, to look at small things.
 import "./engine.css";
-import { loadFonts } from "./fonts.ts";
+import { areAtlasesSettled, onAtlasArrived } from "./atlas.ts";
+import { areFontsSettled, loadFonts, onFontArrived } from "./fonts.ts";
 import type { SavedScene, SceneItem } from "./items.ts";
-import { createDomRenderer } from "./renderers/dom.ts";
-import { createGlRenderer } from "./renderers/gl.ts";
+import { createRenderer, type Renderer } from "./renderers/renderer.ts";
 
-// Art described by atlases arrives a moment later: drawn again a few times (headless Chrome's virtual time runs on)
-const REDRAW_MS = 400;
-const SHOT_REDRAWS = 8;
-const COMPARE_REDRAWS = 10;
+// A shot waits for its art: drawn again until every atlas, picture and font asked for has arrived
+const SETTLE_STEPS = 150;
+const SETTLE_STEP_MS = 50;
 
 const readScene = async (path: string): Promise<SavedScene | null> => {
   try {
@@ -30,16 +30,40 @@ const readScene = async (path: string): Promise<SavedScene | null> => {
   }
 };
 
-const redraw = (times: number, draw: () => void, onDone?: () => void): void => {
-  let count = 0;
-  const timer = setInterval(() => {
+const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** A renderer on a new canvas placed as style says, drawing again whenever art or a font arrives */
+const makeRenderer = async (
+  parent: HTMLElement,
+  style: string,
+  redraw: () => void,
+): Promise<{ renderer: Renderer; canvas: HTMLCanvasElement } | null> => {
+  const canvas = document.createElement("canvas");
+  canvas.style.cssText = style;
+  parent.appendChild(canvas);
+  const renderer = await createRenderer(canvas, redraw);
+  if (!renderer) return null;
+  onAtlasArrived(redraw);
+  onFontArrived(() => {
+    renderer.resetText();
+    redraw();
+  });
+  return { renderer, canvas };
+};
+
+/** Drawn until its art has all arrived, then once more; the title says "ready" when the GPU has done it */
+const drawWhenSettled = async (renderer: Renderer, draw: () => void): Promise<void> => {
+  for (let step = 0; step < SETTLE_STEPS; step++) {
     draw();
-    count += 1;
-    if (count >= times) {
-      clearInterval(timer);
-      onDone?.();
-    }
-  }, REDRAW_MS);
+    if (step >= 2 && areAtlasesSettled() && renderer.isSettled() && areFontsSettled()) break;
+    await wait(SETTLE_STEP_MS);
+  }
+  renderer.resetText(); // (the fonts are all in now: every string laid out in them)
+  draw();
+  await renderer.finished();
+  // (a frame for the canvas to be shown with what was drawn)
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  document.title = "ready";
 };
 
 const showShot = async (root: HTMLElement, path: string, parameters: URLSearchParams): Promise<void> => {
@@ -66,48 +90,17 @@ const showShot = async (root: HTMLElement, path: string, parameters: URLSearchPa
       `background:url("/art?p=${encodeURIComponent(backdrop)}") center/cover no-repeat;filter:brightness(0.8)`;
     frame.appendChild(picture);
   }
-  if (parameters.get("renderer") === "gl") {
-    // Drawn by the GPU's renderer, as the live screen is
-    const canvas = document.createElement("canvas");
-    canvas.style.cssText = place;
-    frame.appendChild(canvas);
-    root.appendChild(frame);
-    let renderer: ReturnType<typeof createGlRenderer> = null;
-    try {
-      renderer = createGlRenderer(canvas, () => {});
-    } catch (problem) {
-      console.warn("AddonSim: no WebGL2", problem);
-    }
-    if (!renderer) {
-      document.title = "no webgl2";
-      return;
-    }
-    const gl = renderer;
-    gl.resize(scene.width, scene.height, window.devicePixelRatio || 1);
-    gl.draw(scene.items);
-    redraw(
-      SHOT_REDRAWS,
-      () => gl.draw(scene.items),
-      () => {
-        document.title = "ready";
-      },
-    );
+  root.appendChild(frame);
+  let draw = (): void => {};
+  const made = await makeRenderer(frame, place, () => draw());
+  if (!made) {
+    document.title = "no gpu";
     return;
   }
-  const layer = document.createElement("div");
-  layer.className = "as-layer"; // drawn as the live screen's layer is
-  layer.style.cssText = `${place};width:${scene.width}px;height:${scene.height}px`;
-  frame.appendChild(layer);
-  root.appendChild(frame);
-  const renderer = createDomRenderer(layer);
-  renderer.render(scene.items);
-  redraw(
-    SHOT_REDRAWS,
-    () => renderer.render(scene.items),
-    () => {
-      document.title = "ready";
-    },
-  );
+  const { renderer } = made;
+  renderer.resize(scene.width, scene.height, window.devicePixelRatio || 1);
+  draw = () => renderer.draw(scene.items);
+  await drawWhenSettled(renderer, draw);
 };
 
 // Each drawn thing as the same text whatever order its fields came in, and without its id (ids differ by run)
@@ -128,44 +121,51 @@ const showComparison = async (root: HTMLElement, paths: readonly string[], param
   const keys = scenes.map((scene) => new Set((scene ? scene.items : []).map(canonical)));
   // ?scale= draws it larger than the window, to look at small things
   const forcedScale = Number(parameters.get("scale"));
-  scenes.forEach((scene, index) => {
+  const drawn = scenes.map(async (scene, index) => {
     const column = document.createElement("div");
     const title = document.createElement("div");
     const label = paths.length === 1 ? "" : index === 0 ? "Reference: " : "Now: ";
     title.textContent = `${label}${paths[index]}${scene ? "" : " (missing)"}`;
     title.style.margin = "0 0 6px";
     column.appendChild(title);
-    if (scene) {
-      const frame = document.createElement("div");
-      const fitScale = Math.min(paths.length === 1 ? 2 : 1, (window.innerWidth / paths.length - 30) / scene.width);
-      const viewScale = forcedScale > 0 ? forcedScale : fitScale;
-      frame.style.cssText =
-        `position:relative;width:${scene.width * viewScale}px;height:${scene.height * viewScale}px;` +
-        "overflow:hidden;background:#1d2a1d;outline:1px solid #444";
-      const layer = document.createElement("div");
-      layer.className = "as-layer"; // drawn as the live screen's layer is
-      layer.style.cssText =
-        `position:absolute;left:0;top:0;width:${scene.width}px;height:${scene.height}px;` +
-        `transform-origin:0 0;transform:scale(${viewScale})`;
-      frame.appendChild(layer);
-      column.appendChild(frame);
-      const renderer = createDomRenderer(layer);
-      renderer.render(scene.items);
-      redraw(COMPARE_REDRAWS, () => renderer.render(scene.items));
-      // What is only in this one, outlined (over the drawn items, which the renderer keeps as the layer's own)
-      const other = keys[1 - index];
-      for (const item of scene.items) {
-        if (!other || other.has(canonical(item)) || !("w" in item)) continue;
-        const box = document.createElement("div");
-        box.style.cssText =
-          `position:absolute;left:${item.x}px;top:${item.y}px;width:${Math.max(item.w, 2)}px;` +
-          `height:${Math.max(item.h, 2)}px;outline:2px solid ${index === 0 ? "#3fa7ff" : "#ff5a3c"};` +
-          "z-index:100000;pointer-events:none";
-        layer.appendChild(box);
-      }
-    }
     root.appendChild(column);
+    if (!scene) return;
+    const fitScale = Math.min(paths.length === 1 ? 2 : 1, (window.innerWidth / paths.length - 30) / scene.width);
+    const viewScale = forcedScale > 0 ? forcedScale : fitScale;
+    const frame = document.createElement("div");
+    frame.style.cssText =
+      `position:relative;width:${scene.width * viewScale}px;height:${scene.height * viewScale}px;` +
+      "overflow:hidden;background:#1d2a1d;outline:1px solid #444";
+    column.appendChild(frame);
+    // The scene drawn at the view's scale (its canvas's pixels as many as shown), the outlines over it
+    const layer = document.createElement("div");
+    layer.style.cssText =
+      `position:absolute;left:0;top:0;width:${scene.width}px;height:${scene.height}px;` +
+      `transform-origin:0 0;transform:scale(${viewScale})`;
+    frame.appendChild(layer);
+    let draw = (): void => {};
+    const made = await makeRenderer(layer, "position:absolute;left:0;top:0", () => draw());
+    if (!made) {
+      title.textContent += " (this browser has no WebGPU to draw it with)";
+      return;
+    }
+    const { renderer } = made;
+    renderer.resize(scene.width, scene.height, viewScale * (window.devicePixelRatio || 1));
+    draw = () => renderer.draw(scene.items);
+    // What is only in this one, outlined
+    const other = keys[1 - index];
+    for (const item of scene.items) {
+      if (!other || other.has(canonical(item)) || !("w" in item)) continue;
+      const box = document.createElement("div");
+      box.style.cssText =
+        `position:absolute;left:${item.x}px;top:${item.y}px;width:${Math.max(item.w, 2)}px;` +
+        `height:${Math.max(item.h, 2)}px;outline:2px solid ${index === 0 ? "#3fa7ff" : "#ff5a3c"};` +
+        "pointer-events:none";
+      layer.appendChild(box);
+    }
+    await drawWhenSettled(renderer, draw);
   });
+  await Promise.all(drawn);
 };
 
 /**

@@ -40,7 +40,9 @@ end
 -- The wheel: the place under the cursor stays under it, and the drawn map moves (it hung still before, its own
 -- anchor kept over the scroll)
 local frameRect = W.computeRect(container)
-local cursorX, cursorY = frameRect[1] + (frameRect[3] - frameRect[1]) * 0.7, sim.screenHeight - (frameRect[2] + (frameRect[4] - frameRect[2]) * 0.4)
+local cursorX, cursorY =
+    frameRect[1] + (frameRect[3] - frameRect[1]) * 0.7,
+    sim.screenHeight - (frameRect[2] + (frameRect[4] - frameRect[2]) * 0.4)
 moveMouse(cursorX, cursorY)
 local beforeX, beforeY = fromPage(cursorX, cursorY)
 local scaleBefore = container:GetCanvasScale()
@@ -48,8 +50,16 @@ scene.input({ type = "wheel", x = cursorX, y = cursorY, delta = 1 })
 wait(0.3)
 expect(container:GetCanvasScale() > scaleBefore, "the wheel zooms in")
 local afterX, afterY = fromPage(cursorX, cursorY)
-expect(math.abs(afterX - beforeX) < 0.01 and math.abs(afterY - beforeY) < 0.01,
-    string.format("the place under the cursor stays under it (%.3f,%.3f -> %.3f,%.3f)", beforeX, beforeY, afterX, afterY))
+expect(
+    math.abs(afterX - beforeX) < 0.01 and math.abs(afterY - beforeY) < 0.01,
+    string.format(
+        "the place under the cursor stays under it (%.3f,%.3f -> %.3f,%.3f)",
+        beforeX,
+        beforeY,
+        afterX,
+        afterY
+    )
+)
 -- A drag pans the zoomed map: the drawn map follows the cursor
 local childLeft = W.computeRect(container.Child)[1]
 scene.input({ type = "move", x = cursorX, y = cursorY })
@@ -69,12 +79,24 @@ local barrensX, barrensY = toPage(0.565, 0.57)
 moveMouse(barrensX, barrensY)
 wait(0.2)
 local info = G.C_Map.GetMapInfoAtPosition(1414, fromPage(barrensX, barrensY))
-expect(info and info.mapID == 1413, "the cursor over The Barrens finds The Barrens (" .. tostring(info and info.name) .. ")")
+expect(
+    info and info.mapID == 1413,
+    "the cursor over The Barrens finds The Barrens (" .. tostring(info and info.name) .. ")"
+)
 local areaLabel
-for provider in pairs(map.dataProviders or {}) do if provider.Label and provider.Label.Name then areaLabel = provider.Label.Name end end
-expect(areaLabel and areaLabel:IsVisible() and areaLabel:GetText() == "The Barrens", "the zone's name shows over the map")
+for provider in pairs(map.dataProviders or {}) do
+    if provider.Label and provider.Label.Name then
+        areaLabel = provider.Label.Name
+    end
+end
+expect(
+    areaLabel and areaLabel:IsVisible() and areaLabel:GetText() == "The Barrens",
+    "the zone's name shows over the map"
+)
 local highlight
-for pin in map:EnumeratePinsByTemplate("MapHighlightPinTemplate") do highlight = pin.HighlightTexture end
+for pin in map:EnumeratePinsByTemplate("MapHighlightPinTemplate") do
+    highlight = pin.HighlightTexture
+end
 expect(highlight and highlight:IsShown() and highlight:GetTexture() == 137094, "The Barrens' shape lights up")
 local mulgore = G.C_Map.GetMapInfoAtPosition(1414, 0.48, 0.62)
 expect(mulgore and mulgore.mapID == 1412, "beside it, Mulgore (" .. tostring(mulgore and mulgore.name) .. ")")
@@ -85,18 +107,29 @@ clickAt(barrensX, barrensY, "RightButton")
 expect(map:GetMapID() == 1414, "a right-click goes back to Kalimdor")
 
 -- The world: each continent where it is drawn
-local world = { kalimdor = G.C_Map.GetMapInfoAtPosition(947, 0.25, 0.5), kingdoms = G.C_Map.GetMapInfoAtPosition(947, 0.75, 0.45) }
-expect(world.kalimdor and world.kalimdor.mapID == 1414 and world.kingdoms and world.kingdoms.mapID == 1415,
-    "on the world map, Kalimdor on the left and the Eastern Kingdoms on the right")
+local world = {
+    kalimdor = G.C_Map.GetMapInfoAtPosition(947, 0.25, 0.5),
+    kingdoms = G.C_Map.GetMapInfoAtPosition(947, 0.75, 0.45),
+}
+expect(
+    world.kalimdor and world.kalimdor.mapID == 1414 and world.kingdoms and world.kingdoms.mapID == 1415,
+    "on the world map, Kalimdor on the left and the Eastern Kingdoms on the right"
+)
 
 -- The nav bar: a continent's and a zone's buttons drop down their neighbours
 map:SetMapID(1413)
 wait(0.3)
-expect(G.C_Map.IsMapValidForNavBarDropdown(1413) and G.C_Map.IsMapValidForNavBarDropdown(1414) and not G.C_Map.IsMapValidForNavBarDropdown(947),
-    "zones and continents drop down in the nav bar; the world does not")
+expect(
+    G.C_Map.IsMapValidForNavBarDropdown(1413)
+        and G.C_Map.IsMapValidForNavBarDropdown(1414)
+        and not G.C_Map.IsMapValidForNavBarDropdown(947),
+    "zones and continents drop down in the nav bar; the world does not"
+)
 local withList = 0
 for _, button in ipairs(map.NavBar.navList or {}) do
-    if button.data and button.data.listFunc then withList = withList + 1 end
+    if button.data and button.data.listFunc then
+        withList = withList + 1
+    end
 end
 expect(withList == 2, "Kalimdor's and The Barrens' buttons have dropdowns (" .. withList .. ")")
 
@@ -104,7 +137,16 @@ expect(withList == 2, "Kalimdor's and The Barrens' buttons have dropdowns (" .. 
 local pinX, pinY = toPage(0.4, 0.6)
 clickAt(pinX, pinY, "LeftButton", { ctrl = true })
 local waypoint = G.C_Map.GetUserWaypoint()
-expect(waypoint and waypoint.uiMapID == 1413 and math.abs(waypoint.position.x - 0.4) < 0.02, "Ctrl+click sets the map pin there")
+expect(
+    waypoint and waypoint.uiMapID == 1413 and math.abs(waypoint.position.x - 0.4) < 0.02,
+    "Ctrl+click sets the map pin there"
+)
 local onKalimdor = G.C_Map.GetUserWaypointPositionForMap(1414)
-expect(onKalimdor and onKalimdor.x > 0.39 and onKalimdor.x < 0.67, "the pin is on Kalimdor's map too, inside The Barrens")
-expect((G.C_Map.GetUserWaypointHyperlink() or ""):find("|Hworldmap:1413:4000:6000|h", 1, true) ~= nil, "the pin's chat link")
+expect(
+    onKalimdor and onKalimdor.x > 0.39 and onKalimdor.x < 0.67,
+    "the pin is on Kalimdor's map too, inside The Barrens"
+)
+expect(
+    (G.C_Map.GetUserWaypointHyperlink() or ""):find("|Hworldmap:1413:4000:6000|h", 1, true) ~= nil,
+    "the pin's chat link"
+)

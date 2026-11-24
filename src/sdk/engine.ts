@@ -5,6 +5,7 @@
 import { existsSync } from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
 import type { Project } from "../project/config.ts";
+import { createMutex } from "../server/mutex.ts";
 import { checkFailure, luaFailure, showPath } from "./failures.ts";
 import type { Answer, GameProcess } from "./gameProcess.ts";
 import { Pool } from "./pool.ts";
@@ -40,6 +41,9 @@ export class Engine {
   readonly maker: RuntimeMaker;
   readonly pool: Pool;
   #live: GameProcess | null = null;
+  // (the daemon serves the CLI and MCP at once: what makes or uses the live game goes one at a time, or a run would
+  // end the game another command is in the middle of)
+  readonly #lock = createMutex();
   #liveScenario = "";
   #liveStartedAt = 0;
   #shooter: Shooter | null = null;
@@ -99,18 +103,20 @@ export class Engine {
     return hadOne ? { game, notice: FRESH_NOTICE } : { game };
   }
 
-  async #command(op: string, fields: Record<string, unknown>, toRun: boolean): Promise<Answer & { notice?: string }> {
-    const { game, notice } = await this.#game(toRun);
-    const answer = await game.command(op, fields);
-    if (!answer) throw new Error(`the game ended:\n${game.log.slice(-30).join("\n")}`);
-    if (typeof answer.error === "string" && answer.ok === undefined) throw new Error(answer.error);
-    return notice ? { ...answer, notice } : answer;
+  #command(op: string, fields: Record<string, unknown>, toRun: boolean): Promise<Answer & { notice?: string }> {
+    return this.#lock.run(async () => {
+      const { game, notice } = await this.#game(toRun);
+      const answer = await game.command(op, fields);
+      if (!answer) throw new Error(`the game ended:\n${game.log.slice(-30).join("\n")}`);
+      if (typeof answer.error === "string" && answer.ok === undefined) throw new Error(answer.error);
+      return notice ? { ...answer, notice } : answer;
+    });
   }
 
   #evalResult(answer: Answer & { notice?: string }): EvalResult {
     const failures = stringList(answer.failures).map((text) => checkFailure(this.project, text));
     const errors = (Array.isArray(answer.errors) ? answer.errors : []) as LuaError[];
-    for (const error of errors) failures.push(luaFailure(this.project, this.maker.config.addonsRoot, error));
+    for (const error of errors) failures.push(luaFailure(this.project, this.maker.config, error));
     const result: EvalResult = {
       ok: answer.ok === true,
       failures,
@@ -142,7 +148,9 @@ export class Engine {
   /** A fresh live game (from the pool: at once when one is booted), nothing played in it */
   async reset(): Promise<{ wasWarm: boolean; seconds: number }> {
     const started = performance.now();
-    const wasWarm = await this.#newLive(this.defaultSpec, join(this.project.scenariosDir, "live.lua"));
+    const wasWarm = await this.#lock.run(() =>
+      this.#newLive(this.defaultSpec, join(this.project.scenariosDir, "live.lua")),
+    );
     return { wasWarm, seconds: (performance.now() - started) / 1000 };
   }
 
@@ -154,10 +162,12 @@ export class Engine {
     const path = this.resolveScenario(scenario);
     const started = performance.now();
     const spec = specOfScenario(this.project, this.maker.config, path, options.login);
-    const wasWarm = await this.#newLive(spec, path, options.update ? { ADDONSIM_UPDATE: "1" } : {});
-    const game = this.#live as GameProcess | null;
-    if (!game) throw new Error("the game did not start");
-    const answer = await game.command("eval", { file: path, draw: true });
+    const { wasWarm, answer, game } = await this.#lock.run(async () => {
+      const isWarm = await this.#newLive(spec, path, options.update ? { ADDONSIM_UPDATE: "1" } : {});
+      const live = this.#live as GameProcess | null;
+      if (!live) throw new Error("the game did not start");
+      return { wasWarm: isWarm, answer: await live.command("eval", { file: path, draw: true }), game: live };
+    });
     if (!answer) throw new Error(`the game ended:\n${game.log.slice(-30).join("\n")}`);
     const result = this.#evalResult(answer);
     const failures: Failure[] = [...result.failures];

@@ -321,7 +321,7 @@
   border-color: var(--accent);
 }
 
-/* A chosen toggle stands out (the input switch, zoom, renderer) */
+/* A chosen toggle stands out (the input switch, zoom) */
 .toggle-button[data-selected="true"] {
   background: var(--accent-soft);
   color: var(--accent);
@@ -335,28 +335,6 @@
 .quest-card.is-complete {
   border-color: color-mix(in oklab, var(--success) 35%, transparent);
   box-shadow: 0 0 18px -8px var(--success);
-}
-
-/* The gossip window: dark parchment, a gold rule under the giver's name */
-.gossip-dialog {
-  background: radial-gradient(120% 60% at 50% 0%, #3a2f1a55, transparent 70%), var(--overlay);
-  border: 1px solid #5a4a2a88;
-}
-.gossip-dialog [data-slot="modal-header"],
-.gossip-dialog header {
-  border-bottom: 1px solid #ffd10033;
-  padding-bottom: 10px;
-}
-
-/* Your addons: one switched on carries a faint accent edge */
-.addon-card {
-  background: var(--surface);
-  border-color: var(--separator);
-}
-.addon-card.is-on {
-  border-color: color-mix(in oklab, var(--accent) 30%, var(--separator));
-  background:
-    linear-gradient(90deg, color-mix(in oklab, var(--accent) 6%, transparent), transparent 40%), var(--surface);
 }
 
 /* Errors: a dark red card */
@@ -382,11 +360,6 @@
 }
 .lua-editor {
   background: #0b0d10;
-}
-
-/* Tabs kept mounted (what was typed in them stays): the ones not shown are out of the way */
-.tabs__panel[inert] {
-  display: none;
 }
 
 /* A party member's card, tinted by their class (--class-color, set on the card) */
@@ -547,4 +520,62 @@
 }
 .loot-dialog {
   background: radial-gradient(120% 60% at 50% 0%, #3a2f1a55, transparent 70%), var(--overlay);
+}
+
+/* Addons: the bar of the changes waiting */
+.addon-changes {
+  background: color-mix(in oklab, var(--accent) 8%, var(--surface));
+  border-color: color-mix(in oklab, var(--accent) 40%, var(--separator));
+  box-shadow: 0 6px 18px -10px rgb(0 0 0 / 0.6);
+}
+
+/* Addons, as the game's AddOns list: each category a panel under a gold heading band, one line an addon */
+.addon-category {
+  background: var(--surface);
+  border-color: var(--separator);
+}
+.addon-category.is-open {
+  border-color: color-mix(in oklab, #ffd100 18%, var(--separator));
+}
+.addon-category-heading {
+  color: #ffd100;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, #ffd100 13%, transparent),
+    color-mix(in oklab, #ffd100 3%, transparent) 70%
+  );
+}
+.addon-category.is-open .addon-category-heading {
+  border-bottom: 1px solid color-mix(in oklab, #ffd100 16%, var(--separator));
+}
+.addon-category-heading:hover {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, #ffd100 20%, transparent),
+    color-mix(in oklab, #ffd100 6%, transparent) 70%
+  );
+}
+.addon-category-heading .is-plain {
+  color: var(--foreground);
+}
+.addon-category-count {
+  color: var(--muted);
+  background: color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+.addon-category-count.has-on {
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+}
+.addon-row:hover {
+  background: color-mix(in oklab, var(--foreground) 5%, transparent);
+}
+.addon-row.is-open {
+  background: color-mix(in oklab, var(--foreground) 4%, transparent);
+}
+.addon-row.is-changing {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.addon-row.is-highlighted {
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+  transition: background 0.4s;
 }

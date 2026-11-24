@@ -5,6 +5,7 @@ import { CharacterSummary } from "./CharacterSummary.tsx";
 import { ClockControls } from "./ClockControls.tsx";
 import { InputSwitch } from "./InputSwitch.tsx";
 import { SlashCommand } from "./SlashCommand.tsx";
+import { SoundSwitch } from "./SoundSwitch.tsx";
 import { ClientBadges, ErrorsButton, ViewChip } from "./StatusBadges.tsx";
 
 const Brand = () => (
@@ -36,6 +37,7 @@ export const Header = () => (
     <SlashCommand />
     <CharacterSummary />
     <span className="grow" />
+    <SoundSwitch />
     <InputSwitch />
     <Separator orientation="vertical" className="h-6" />
     <ViewChip />

@@ -2,7 +2,7 @@
 // demand, copied, or reset (the file deleted and the game reloaded, as if the addon had never run; asks first)
 import { ArrowRotateRight, Database, TrashBin } from "@gravity-ui/icons";
 import { AlertDialog, Button, Chip, Drawer, ScrollShadow, Skeleton, toast } from "@heroui/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CopyButton, EmptyState } from "../../components/bits.tsx";
 import { formatBytes } from "../../components/format.ts";
 import { requestWholeScene } from "../../shell/screen.ts";
@@ -16,13 +16,18 @@ export const SavedDrawer = ({ addon, onClose, onReset }: Props) => {
   const [file, setFile] = useState<SavedFile | null>(null);
   const [isConfirming, setConfirming] = useState(false);
   const name = addon?.name ?? null;
+  const nameRef = useRef(name);
+  nameRef.current = name;
 
+  // (an answer for an addon no longer shown is dropped: switching quickly must not show the one before)
   const read = useCallback(async (): Promise<void> => {
     if (!name) return;
     setFile(null);
     try {
-      setFile(await api.saved(name));
+      const answer = await api.saved(name);
+      if (nameRef.current === name) setFile(answer);
     } catch (error) {
+      if (nameRef.current !== name) return;
       setFile({ addon: name, text: null });
       toast.danger(`Could not read ${name}'s saved variables`, { description: String(error) });
     }

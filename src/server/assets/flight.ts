@@ -2,7 +2,7 @@
 
 export const RETRY_SECONDS = 120;
 
-/** Concurrent calls for the same key share one run of the task (what the Python's per-file locks achieved) */
+/** Concurrent calls for the same key share one run of the task (one download or conversion of a file at a time) */
 export class SingleFlight {
   private readonly running = new Map<string, Promise<unknown>>();
 

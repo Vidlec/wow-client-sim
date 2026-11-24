@@ -2,6 +2,7 @@
 // scene first, then what changed); without one (the socket closed) the page polls /api/scene for whole scenes until
 // it is back. Input goes the same way: over the socket, in order with everything else sent on it, or posted one
 // after another (a release must never overtake its press).
+import { createBinaryState, readBinaryFrame } from "./binaryFrame.ts";
 import type { SceneFrame } from "./items.ts";
 import type { InputEvent } from "./types.ts";
 
@@ -40,7 +41,8 @@ export const createStream = ({ onFrame, onConnection }: StreamHandlers): Stream 
   const fetchScene = async (): Promise<boolean> => {
     try {
       const frame = (await (await fetch(`/api/scene?since=${version ?? ""}`)).json()) as SceneFrame;
-      if (!isClosed) {
+      // (a poll answered after the socket opened is older than the socket's frames: dropped)
+      if (!isClosed && !socket) {
         onConnection(true);
         take(frame);
       }
@@ -85,6 +87,10 @@ export const createStream = ({ onFrame, onConnection }: StreamHandlers): Stream 
   const connect = (): void => {
     if (isClosed) return;
     const opened = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
+    // (frames come as JSON text, or binary when the simulator's native store is built: binaryFrame.ts; the keys' ids
+    // a binary frame uses are this connection's)
+    opened.binaryType = "arraybuffer";
+    const binaryState = createBinaryState();
     opened.onopen = () => {
       if (isClosed) {
         opened.close();
@@ -95,7 +101,8 @@ export const createStream = ({ onFrame, onConnection }: StreamHandlers): Stream 
     };
     opened.onmessage = (event) => {
       try {
-        take(JSON.parse(String(event.data)) as SceneFrame);
+        if (event.data instanceof ArrayBuffer) take(readBinaryFrame(event.data, binaryState));
+        else take(JSON.parse(String(event.data)) as SceneFrame);
       } catch (problem) {
         console.warn("AddonSim frame", problem);
       }

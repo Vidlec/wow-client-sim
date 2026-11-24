@@ -12,9 +12,13 @@ local function caseBlind()
     return setmetatable({}, {
         __newindex = function(names, name, value)
             rawset(names, name, value)
-            if type(name) == "string" then byLower[name:lower()] = value end
+            if type(name) == "string" then
+                byLower[name:lower()] = value
+            end
         end,
-        __index = function(_, name) return type(name) == "string" and byLower[name:lower()] or nil end,
+        __index = function(_, name)
+            return type(name) == "string" and byLower[name:lower()] or nil
+        end,
     })
 end
 local xmlui = { templates = caseBlind(), intrinsics = caseBlind() }
@@ -23,34 +27,91 @@ local S = W.state
 local G = sim.G
 
 local FRAME_TAGS = {
-    Frame = "Frame", Button = "Button", CheckButton = "CheckButton", EditBox = "EditBox", ScrollFrame = "ScrollFrame",
-    Slider = "Slider", StatusBar = "StatusBar", Cooldown = "Cooldown", GameTooltip = "GameTooltip", MessageFrame = "MessageFrame",
-    ScrollingMessageFrame = "ScrollingMessageFrame", Model = "Model", PlayerModel = "PlayerModel", DressUpModel = "DressUpModel",
-    CinematicModel = "PlayerModel", TabardModel = "PlayerModel", ModelScene = "ModelScene", SimpleHTML = "SimpleHTML",
-    ColorSelect = "ColorSelect", DropdownButton = "DropdownButton", Minimap = "Minimap", MovieFrame = "Frame",
-    OffScreenFrame = "Frame", Browser = "Browser", QuestPOIFrame = "Frame", ScenarioPOIFrame = "Frame", UnitPositionFrame = "Frame",
-    FogOfWarFrame = "Frame", ArchaeologyDigSiteFrame = "Frame", Checkout = "Frame", ContainedAlertFrame = "Frame",
-    ItemButton = "Button", WorldFrame = "Frame", ScrollBar = "Frame",
+    Frame = "Frame",
+    Button = "Button",
+    CheckButton = "CheckButton",
+    EditBox = "EditBox",
+    ScrollFrame = "ScrollFrame",
+    Slider = "Slider",
+    StatusBar = "StatusBar",
+    Cooldown = "Cooldown",
+    GameTooltip = "GameTooltip",
+    MessageFrame = "MessageFrame",
+    ScrollingMessageFrame = "ScrollingMessageFrame",
+    Model = "Model",
+    PlayerModel = "PlayerModel",
+    DressUpModel = "DressUpModel",
+    CinematicModel = "PlayerModel",
+    TabardModel = "PlayerModel",
+    ModelScene = "ModelScene",
+    SimpleHTML = "SimpleHTML",
+    ColorSelect = "ColorSelect",
+    DropdownButton = "DropdownButton",
+    Minimap = "Minimap",
+    MovieFrame = "Frame",
+    OffScreenFrame = "Frame",
+    Browser = "Browser",
+    QuestPOIFrame = "Frame",
+    ScenarioPOIFrame = "Frame",
+    UnitPositionFrame = "Frame",
+    FogOfWarFrame = "Frame",
+    ArchaeologyDigSiteFrame = "Frame",
+    Checkout = "Frame",
+    ContainedAlertFrame = "Frame",
+    ItemButton = "Button",
+    WorldFrame = "Frame",
+    ScrollBar = "Frame",
 }
 local REGION_TAGS = { Texture = "Texture", FontString = "FontString", MaskTexture = "MaskTexture", Line = "Line" }
 
 -- The arguments each script gets, named as the game names them for inline code
 local SCRIPT_ARGUMENTS = {
-    OnEvent = "event, ...", OnUpdate = "elapsed", OnClick = "button, down", PreClick = "button, down", PostClick = "button, down",
-    OnDoubleClick = "button", OnMouseDown = "button", OnMouseUp = "button, upInside", OnMouseWheel = "delta", OnEnter = "motion",
-    OnLeave = "motion", OnSizeChanged = "width, height", OnValueChanged = "value, userInput", OnMinMaxChanged = "min, max",
-    OnTextChanged = "userInput", OnChar = "text", OnKeyDown = "key", OnKeyUp = "key", OnDragStart = "button",
-    OnVerticalScroll = "offset", OnHorizontalScroll = "offset", OnScrollRangeChanged = "xrange, yrange", OnAttributeChanged = "name, value",
-    OnHyperlinkClick = "link, text, button", OnHyperlinkEnter = "link, text", OnCursorChanged = "x, y, w, h", OnFinished = "requested",
-    OnStop = "requested", OnArrowPressed = "key", OnGamePadButtonDown = "button", OnGamePadButtonUp = "button", OnGamePadStick = "stick, x, y, len",
+    OnEvent = "event, ...",
+    OnUpdate = "elapsed",
+    OnClick = "button, down",
+    PreClick = "button, down",
+    PostClick = "button, down",
+    OnDoubleClick = "button",
+    OnMouseDown = "button",
+    OnMouseUp = "button, upInside",
+    OnMouseWheel = "delta",
+    OnEnter = "motion",
+    OnLeave = "motion",
+    OnSizeChanged = "width, height",
+    OnValueChanged = "value, userInput",
+    OnMinMaxChanged = "min, max",
+    OnTextChanged = "userInput",
+    OnChar = "text",
+    OnKeyDown = "key",
+    OnKeyUp = "key",
+    OnDragStart = "button",
+    OnVerticalScroll = "offset",
+    OnHorizontalScroll = "offset",
+    OnScrollRangeChanged = "xrange, yrange",
+    OnAttributeChanged = "name, value",
+    OnHyperlinkClick = "link, text, button",
+    OnHyperlinkEnter = "link, text",
+    OnCursorChanged = "x, y, w, h",
+    OnFinished = "requested",
+    OnStop = "requested",
+    OnArrowPressed = "key",
+    OnGamePadButtonDown = "button",
+    OnGamePadButtonUp = "button",
+    OnGamePadStick = "stick, x, y, len",
 }
 
-local function isTrue(value) return value == "true" or value == "1" end
+local function isTrue(value)
+    return value == "true" or value == "1"
+end
 
 local function substituteParent(text, parent)
-    if type(text) ~= "string" or not text:find("$parent", 1, true) then return text end
+    if type(text) ~= "string" or not text:find("$parent", 1, true) then
+        return text
+    end
     local parentName = parent and require("widgets").getParentNameFor(parent)
-    if not parentName then return nil end
+    if not parentName then
+        return nil
+    end
     return (text:gsub("%$parent", parentName))
 end
 
@@ -72,7 +133,9 @@ local function readNumber(element, name, fallback)
 end
 
 local function readDimension(element)
-    if not element then return nil end
+    if not element then
+        return nil
+    end
     local absolute = xml.child(element, "AbsDimension")
     local source = absolute or element
     return tonumber(source.attrs.x), tonumber(source.attrs.y)
@@ -81,10 +144,15 @@ end
 local function readColor(element)
     if element.attrs.color then
         local named = G[element.attrs.color]
-        if type(named) == "table" and named.r then return named.r, named.g, named.b, named.a or 1 end
+        if type(named) == "table" and named.r then
+            return named.r, named.g, named.b, named.a or 1
+        end
         return 1, 1, 1, 1
     end
-    return readNumber(element, "r", 1), readNumber(element, "g", 1), readNumber(element, "b", 1), readNumber(element, "a", 1)
+    return readNumber(element, "r", 1),
+        readNumber(element, "g", 1),
+        readNumber(element, "b", 1),
+        readNumber(element, "a", 1)
 end
 
 -- Anchors wait until the whole tree exists: templates anchor to siblings made later in the file
@@ -117,7 +185,15 @@ local function resolvePendingAnchors()
             local offsetX, offsetY = readDimension(offset)
             x, y = offsetX or x, offsetY or y
         end
-        sim.call(object.SetPoint, object, attrs.point or "CENTER", relative, attrs.relativePoint or attrs.point or "CENTER", x, y)
+        sim.call(
+            object.SetPoint,
+            object,
+            attrs.point or "CENTER",
+            relative,
+            attrs.relativePoint or attrs.point or "CENTER",
+            x,
+            y
+        )
     end
 end
 xmlui.resolvePendingAnchors = resolvePendingAnchors
@@ -128,17 +204,22 @@ local function compileScript(element, scriptName, chunkName)
         local method = attrs.method
         return function(self, ...)
             local handler = self[method]
-            if handler then return handler(self, ...) end
+            if handler then
+                return handler(self, ...)
+            end
         end
     elseif attrs["function"] then
         local functionName = attrs["function"]
         return function(...)
             local handler = G[functionName]
-            if handler then return handler(...) end
+            if handler then
+                return handler(...)
+            end
         end
     elseif element.text and element.text:match("%S") then
         local arguments = SCRIPT_ARGUMENTS[scriptName] or "..."
-        local chunk, problem = loadstring("return function(self, " .. arguments .. ")\n" .. element.text .. "\nend", "@" .. chunkName)
+        local chunk, problem =
+            loadstring("return function(self, " .. arguments .. ")\n" .. element.text .. "\nend", "@" .. chunkName)
         if not chunk then
             sim.reportError(problem, "")
             return nil
@@ -160,15 +241,28 @@ local function applyScripts(object, scriptsElement, chunkName)
             -- box's appended OnLoad sets self.chatFrame, which the template's own OnLoad then reads)
             if existing and inherit == "prepend" then
                 local newHandler = handler
-                handler = function(...) existing(...); return newHandler(...) end
+                handler = function(...)
+                    existing(...)
+                    return newHandler(...)
+                end
             elseif existing and inherit == "append" then
                 local newHandler = handler
-                handler = function(...) newHandler(...); return existing(...) end
+                handler = function(...)
+                    newHandler(...)
+                    return existing(...)
+                end
             end
             s.scripts[scriptName] = handler
             W.watchScript(object, scriptName)
-            if scriptName == "OnUpdate" then sim.setOnUpdate(object, true) end
-            if scriptName == "OnMouseWheel" and s.mouseWheel == nil then s.mouseWheel = true end -- (as SetScript: takes the wheel)
+            if scriptName == "OnUpdate" then
+                sim.setOnUpdate(object, true)
+            end
+            if scriptName == "OnMouseWheel" and s.mouseWheel == nil then
+                s.mouseWheel = true
+            end -- (as SetScript: takes the wheel)
+            if W.MOUSE_SCRIPTS[scriptName] and s.mouse == nil then
+                s.mouse = true
+            end -- (and the mouse: OnEnter, OnMouseDown...)
         end
     end
 end
@@ -177,8 +271,10 @@ local function applyKeyValues(object, element)
     for _, keyValue in ipairs(element.children) do
         if keyValue.tag == "KeyValue" then
             local value, valueType = keyValue.attrs.value, keyValue.attrs.type
-            if valueType == "number" then value = tonumber(value)
-            elseif valueType == "boolean" then value = isTrue(value)
+            if valueType == "number" then
+                value = tonumber(value)
+            elseif valueType == "boolean" then
+                value = isTrue(value)
             elseif valueType == "global" then
                 -- A path as well as a name: "Enum.EditModeSystem.UnitFrame" (each Edit Mode system's id)
                 local found = G
@@ -186,9 +282,13 @@ local function applyKeyValues(object, element)
                     found = type(found) == "table" and found[part] or nil
                 end
                 value = found
-            elseif valueType == "nil" then value = nil end
+            elseif valueType == "nil" then
+                value = nil
+            end
             local key = keyValue.attrs.key
-            if keyValue.attrs.keyType == "number" then key = tonumber(key) or key end
+            if keyValue.attrs.keyType == "number" then
+                key = tonumber(key) or key
+            end
             object[key] = value
         end
     end
@@ -198,7 +298,9 @@ local function assignKeys(object, attrs, parent)
     if parent and attrs.parentKey then
         parent[attrs.parentKey] = object
         -- (what GetParentKey answers: the spellbook's gamepad footers are named after it)
-        if S[object] then S[object].parentKey = attrs.parentKey end
+        if S[object] then
+            S[object].parentKey = attrs.parentKey
+        end
     end
     if parent and attrs.parentArray then
         parent[attrs.parentArray] = parent[attrs.parentArray] or {}
@@ -211,7 +313,9 @@ local function applyMixins(object, attrs)
         for mixinName in (attrs[attribute] or ""):gmatch("[^,%s]+") do
             local mixin = G[mixinName]
             if type(mixin) == "table" then
-                for key, value in pairs(mixin) do object[key] = value end
+                for key, value in pairs(mixin) do
+                    object[key] = value
+                end
             else
                 sim.noteStub("mixin " .. mixinName)
             end
@@ -234,28 +338,73 @@ applyRegionElement = function(region, element, chunkName)
     end
     applyMixins(region, attrs)
     local isFontString = S[region].type == "FontString"
-    if attrs.file then region:SetTexture(tonumber(attrs.file) or attrs.file) end
-    if attrs.atlas then region:SetAtlas(attrs.atlas, isTrue(attrs.useAtlasSize)) end
-    if attrs.alphaMode and region.SetBlendMode then region:SetBlendMode(attrs.alphaMode) end
-    if attrs.alpha then region:SetAlpha(tonumber(attrs.alpha)) end
-    -- A texture's own scale, as a frame's (the gamepad's focus glow is drawn at half: its sliced corners at half size)
-    if attrs.scale and region.SetScale then region:SetScale(tonumber(attrs.scale)) end
-    if attrs.hidden then region:SetShown(not isTrue(attrs.hidden)) end
-    if attrs.horizTile then S[region].horizTile = isTrue(attrs.horizTile) end
-    if attrs.vertTile then S[region].vertTile = isTrue(attrs.vertTile) end
-    if attrs.desaturated and region.SetDesaturated then region:SetDesaturated(isTrue(attrs.desaturated)) end
-    if attrs.rotation and region.SetRotation then region:SetRotation(math.rad(tonumber(attrs.rotation) or 0)) end
-    if isFontString then
-        if attrs.font then region:SetFont(attrs.font, tonumber(attrs.size) or 12, attrs.outline == "THICK" and "THICKOUTLINE" or attrs.outline == "NORMAL" and "OUTLINE" or "") end
-        if attrs.text then region:SetText(G[attrs.text] or attrs.text) end
-        if attrs.justifyH then region:SetJustifyH(attrs.justifyH) end
-        if attrs.justifyV then region:SetJustifyV(attrs.justifyV) end
-        if attrs.maxLines then region:SetMaxLines(tonumber(attrs.maxLines)) end
-        if attrs.wordwrap then region:SetWordWrap(isTrue(attrs.wordwrap)) end
-        if attrs.nonspacewrap then region:SetNonSpaceWrap(isTrue(attrs.nonspacewrap)) end
-        if attrs.spacing then region:SetSpacing(tonumber(attrs.spacing)) end
+    if attrs.file then
+        region:SetTexture(tonumber(attrs.file) or attrs.file, attrs.hWrapMode, attrs.vWrapMode)
+    elseif (attrs.hWrapMode or attrs.vWrapMode) and S[region].type ~= "FontString" then
+        -- (an atlas's mask: the wrap modes alone)
+        S[region].wrapH, S[region].wrapV = W.wrapMode(attrs.hWrapMode), W.wrapMode(attrs.vWrapMode)
     end
-    if attrs.setAllPoints and isTrue(attrs.setAllPoints) then region:SetAllPoints(S[region].parent) end
+    if attrs.atlas then
+        region:SetAtlas(attrs.atlas, isTrue(attrs.useAtlasSize))
+    end
+    if attrs.alphaMode and region.SetBlendMode then
+        region:SetBlendMode(attrs.alphaMode)
+    end
+    if attrs.alpha then
+        region:SetAlpha(tonumber(attrs.alpha))
+    end
+    -- A texture's own scale, as a frame's (the gamepad's focus glow is drawn at half: its sliced corners at half size)
+    if attrs.scale and region.SetScale then
+        region:SetScale(tonumber(attrs.scale))
+    end
+    if attrs.hidden then
+        region:SetShown(not isTrue(attrs.hidden))
+    end
+    if attrs.horizTile then
+        S[region].horizTile = isTrue(attrs.horizTile)
+    end
+    if attrs.vertTile then
+        S[region].vertTile = isTrue(attrs.vertTile)
+    end
+    if attrs.desaturated and region.SetDesaturated then
+        region:SetDesaturated(isTrue(attrs.desaturated))
+    end
+    if attrs.rotation and region.SetRotation then
+        region:SetRotation(math.rad(tonumber(attrs.rotation) or 0))
+    end
+    if isFontString then
+        if attrs.font then
+            region:SetFont(
+                attrs.font,
+                tonumber(attrs.size) or 12,
+                attrs.outline == "THICK" and "THICKOUTLINE" or attrs.outline == "NORMAL" and "OUTLINE" or ""
+            )
+        end
+        if attrs.text then
+            region:SetText(G[attrs.text] or attrs.text)
+        end
+        if attrs.justifyH then
+            region:SetJustifyH(attrs.justifyH)
+        end
+        if attrs.justifyV then
+            region:SetJustifyV(attrs.justifyV)
+        end
+        if attrs.maxLines then
+            region:SetMaxLines(tonumber(attrs.maxLines))
+        end
+        if attrs.wordwrap then
+            region:SetWordWrap(isTrue(attrs.wordwrap))
+        end
+        if attrs.nonspacewrap then
+            region:SetNonSpaceWrap(isTrue(attrs.nonspacewrap))
+        end
+        if attrs.spacing then
+            region:SetSpacing(tonumber(attrs.spacing))
+        end
+    end
+    if attrs.setAllPoints and isTrue(attrs.setAllPoints) then
+        region:SetAllPoints(S[region].parent)
+    end
     for _, child in ipairs(element.children) do
         local tag = child.tag
         if tag == "Animations" then
@@ -263,48 +412,85 @@ applyRegionElement = function(region, element, chunkName)
             xmlui.applyAnimations(region, child)
         elseif tag == "Size" then
             local x, y = readDimension(child)
-            if x or child.attrs.x then S[region].width = x or tonumber(child.attrs.x) end
-            if y or child.attrs.y then S[region].height = y or tonumber(child.attrs.y) end
-            sim.touch()
+            if x or child.attrs.x then
+                S[region].width = x or tonumber(child.attrs.x)
+            end
+            if y or child.attrs.y then
+                S[region].height = y or tonumber(child.attrs.y)
+            end
+            -- (its own rectangle and those worked out from it: the whole layout is not thrown away for one new region)
+            W.touchLayoutOf(region)
         elseif tag == "Anchors" then
             applyAnchors(region, child)
         elseif tag == "Color" then
-            if isFontString then region:SetTextColor(readColor(child))
-            elseif S[region].texture or S[region].atlas then region:SetVertexColor(readColor(child))
-            elseif region.SetColorTexture then region:SetColorTexture(readColor(child))
-            else sim.noteStub("<Color> on a " .. tostring(region.GetObjectType and region:GetObjectType() or "region") .. " (no SetColorTexture)") end
+            if isFontString then
+                region:SetTextColor(readColor(child))
+            elseif S[region].texture or S[region].atlas then
+                region:SetVertexColor(readColor(child))
+            elseif region.SetColorTexture then
+                region:SetColorTexture(readColor(child))
+            else
+                sim.noteStub(
+                    "<Color> on a "
+                        .. tostring(region.GetObjectType and region:GetObjectType() or "region")
+                        .. " (no SetColorTexture)"
+                )
+            end
         elseif tag == "TexCoords" and region.SetTexCoord then
             local rect = xml.child(child, "Rect")
             if rect then
                 local a = rect.attrs
-                region:SetTexCoord(tonumber(a.ULx) or 0, tonumber(a.ULy) or 0, tonumber(a.LLx) or 0, tonumber(a.LLy) or 1,
-                    tonumber(a.URx) or 1, tonumber(a.URy) or 0, tonumber(a.LRx) or 1, tonumber(a.LRy) or 1)
+                region:SetTexCoord(
+                    tonumber(a.ULx) or 0,
+                    tonumber(a.ULy) or 0,
+                    tonumber(a.LLx) or 0,
+                    tonumber(a.LLy) or 1,
+                    tonumber(a.URx) or 1,
+                    tonumber(a.URy) or 0,
+                    tonumber(a.LRx) or 1,
+                    tonumber(a.LRy) or 1
+                )
             else
-                region:SetTexCoord(readNumber(child, "left", 0), readNumber(child, "right", 1), readNumber(child, "top", 0), readNumber(child, "bottom", 1))
+                region:SetTexCoord(
+                    readNumber(child, "left", 0),
+                    readNumber(child, "right", 1),
+                    readNumber(child, "top", 0),
+                    readNumber(child, "bottom", 1)
+                )
             end
         elseif tag == "Gradient" and region.SetGradient then
             local minimum, maximum = xml.child(child, "MinColor"), xml.child(child, "MaxColor")
             if minimum and maximum then
                 local r1, g1, b1, a1 = readColor(minimum)
                 local r2, g2, b2, a2 = readColor(maximum)
-                region:SetGradient(child.attrs.orientation or "HORIZONTAL", { r = r1, g = g1, b = b1, a = a1 }, { r = r2, g = g2, b = b2, a = a2 })
+                region:SetGradient(
+                    child.attrs.orientation or "HORIZONTAL",
+                    { r = r1, g = g1, b = b1, a = a1 },
+                    { r = r2, g = g2, b = b2, a = a2 }
+                )
             end
         elseif tag == "Shadow" and isFontString then
             local offset = xml.child(child, "Offset")
             local x, y = readDimension(offset)
             region:SetShadowOffset(x or tonumber(child.attrs.x) or 1, y or tonumber(child.attrs.y) or -1)
             local color = xml.child(child, "Color")
-            if color then region:SetShadowColor(readColor(color)) end
+            if color then
+                region:SetShadowColor(readColor(color))
+            end
         elseif tag == "FontHeight" and isFontString then
             local value = xml.child(child, "AbsValue")
             local path, _, flags = region:GetFont()
-            if value then region:SetFont(path, tonumber(value.attrs.val) or 12, flags) end
+            if value then
+                region:SetFont(path, tonumber(value.attrs.val) or 12, flags)
+            end
         elseif tag == "KeyValues" then
             applyKeyValues(region, child)
         elseif tag == "Scripts" then
             -- regions have few scripts the simulator runs; OnLoad is run below
             for _, script in ipairs(child.children) do
-                if script.tag == "OnLoad" then S[region].onLoad = compileScript(script, "OnLoad", chunkName) end
+                if script.tag == "OnLoad" then
+                    S[region].onLoad = compileScript(script, "OnLoad", chunkName)
+                end
             end
         end
     end
@@ -324,36 +510,58 @@ local function buildRegion(frame, element, layer, sublevel, chunkName)
             xmlui.pendingMasks[#xmlui.pendingMasks + 1] = { frame = frame, key = childKey, mask = region }
         end
     end
-    if S[region].onLoad then sim.call(S[region].onLoad, region) end
+    if S[region].onLoad then
+        sim.call(S[region].onLoad, region)
+    end
     return region
 end
 xmlui.pendingMasks = {}
 
 local function buildButtonPart(button, element, chunkName)
     local tag = element.tag
-    local textureSetters = { NormalTexture = "SetNormalTexture", PushedTexture = "SetPushedTexture", DisabledTexture = "SetDisabledTexture",
-        HighlightTexture = "SetHighlightTexture", CheckedTexture = "SetCheckedTexture", DisabledCheckedTexture = "SetDisabledCheckedTexture",
-        ThumbTexture = "SetThumbTexture", BarTexture = "SetStatusBarTexture" }
+    local textureSetters = {
+        NormalTexture = "SetNormalTexture",
+        PushedTexture = "SetPushedTexture",
+        DisabledTexture = "SetDisabledTexture",
+        HighlightTexture = "SetHighlightTexture",
+        CheckedTexture = "SetCheckedTexture",
+        DisabledCheckedTexture = "SetDisabledCheckedTexture",
+        ThumbTexture = "SetThumbTexture",
+        BarTexture = "SetStatusBarTexture",
+    }
     if textureSetters[tag] and button[textureSetters[tag]] then
         local layer = tag == "HighlightTexture" and "HIGHLIGHT" or (tag == "ThumbTexture" and "OVERLAY") or "ARTWORK"
         local region = W.createRegion(button, "Texture", substituteParent(element.attrs.name, button), layer)
         assignKeys(region, element.attrs, button)
         applyRegionElement(region, element, chunkName)
-        if #S[region].points == 0 and tag ~= "ThumbTexture" then region:SetAllPoints(button) end
-        if tag == "HighlightTexture" and not element.attrs.alphaMode then region:SetBlendMode("ADD") end
+        if #S[region].points == 0 and tag ~= "ThumbTexture" then
+            region:SetAllPoints(button)
+        end
+        if tag == "HighlightTexture" and not element.attrs.alphaMode then
+            region:SetBlendMode("ADD")
+        end
         button[textureSetters[tag]](button, region)
         return true
     end
-    local fontSetters = { NormalFont = "SetNormalFontObject", HighlightFont = "SetHighlightFontObject", DisabledFont = "SetDisabledFontObject" }
+    local fontSetters = {
+        NormalFont = "SetNormalFontObject",
+        HighlightFont = "SetHighlightFontObject",
+        DisabledFont = "SetDisabledFontObject",
+    }
     if fontSetters[tag] and button[fontSetters[tag]] then
-        if element.attrs.style then button[fontSetters[tag]](button, element.attrs.style) end
+        if element.attrs.style then
+            button[fontSetters[tag]](button, element.attrs.style)
+        end
         return true
     end
     if tag == "ButtonText" and button.GetFontString then
         local text = button:GetFontString()
         if element.attrs.name then
             local name = substituteParent(element.attrs.name, button)
-            if name then S[text].name = name; G[name] = text end
+            if name then
+                S[text].name = name
+                G[name] = text
+            end
         end
         assignKeys(text, element.attrs, button)
         applyRegionElement(text, element, chunkName)
@@ -363,7 +571,9 @@ local function buildButtonPart(button, element, chunkName)
         button:SetStatusBarColor(readColor(element))
         return true
     end
-    if tag == "PushedTextOffset" then return true end
+    if tag == "PushedTextOffset" then
+        return true
+    end
     return false
 end
 
@@ -371,64 +581,174 @@ end
 applyFrameElement = function(frame, element, chunkName)
     local attrs = element.attrs
     -- An intrinsic tag (EventButton, DropdownButton...) brings its own definition first
-    if xmlui.intrinsics[element.tag] then xmlui.applyIntrinsic(frame, element.tag) end
+    if xmlui.intrinsics[element.tag] then
+        xmlui.applyIntrinsic(frame, element.tag)
+    end
     for templateName in (attrs.inherits or ""):gmatch("[^,%s]+") do
         xmlui.applyTemplate(frame, templateName)
     end
     applyMixins(frame, attrs)
     local s = S[frame]
-    if attrs.setAllPoints and isTrue(attrs.setAllPoints) then frame:SetAllPoints(s.parent) end
-    if attrs.alpha then frame:SetAlpha(tonumber(attrs.alpha)) end
-    if attrs.scale then frame:SetScale(tonumber(attrs.scale)) end
-    if attrs.fixedFrameStrata == "true" then frame:SetFixedFrameStrata(true) end
-    if attrs.frameStrata then frame:SetFrameStrata(attrs.frameStrata) end
-    if attrs.frameLevel then frame:SetFrameLevel(tonumber(attrs.frameLevel)) end
-    if attrs.collapsesLayout and isTrue(attrs.collapsesLayout) then s.collapsesLayout = true end
+    if attrs.setAllPoints and isTrue(attrs.setAllPoints) then
+        frame:SetAllPoints(s.parent)
+    end
+    if attrs.alpha then
+        frame:SetAlpha(tonumber(attrs.alpha))
+    end
+    if attrs.scale then
+        frame:SetScale(tonumber(attrs.scale))
+    end
+    if attrs.fixedFrameStrata == "true" then
+        frame:SetFixedFrameStrata(true)
+    end
+    if attrs.frameStrata then
+        frame:SetFrameStrata(attrs.frameStrata)
+    end
+    if attrs.frameLevel then
+        frame:SetFrameLevel(tonumber(attrs.frameLevel))
+    end
+    if attrs.collapsesLayout and isTrue(attrs.collapsesLayout) then
+        s.collapsesLayout = true
+    end
     if attrs.useParentLevel and isTrue(attrs.useParentLevel) then
         s.useParentLevel = true
         local parentState = s.parent and S[s.parent]
-        if parentState then s.level = parentState.level or 0; W.touchOrder() end
+        if parentState then
+            s.level = parentState.level or 0
+            W.touchOrder()
+        end
     end
-    if attrs.toplevel then frame:SetToplevel(isTrue(attrs.toplevel)) end
-    if attrs.movable then frame:SetMovable(isTrue(attrs.movable)) end
-    if attrs.resizable then frame:SetResizable(isTrue(attrs.resizable)) end
-    if attrs.dontSavePosition then frame:SetDontSavePosition(isTrue(attrs.dontSavePosition)) end
-    if attrs.enableMouse then frame:EnableMouse(isTrue(attrs.enableMouse)) end
+    if attrs.toplevel then
+        frame:SetToplevel(isTrue(attrs.toplevel))
+    end
+    -- protected="true" (SecureFrameTemplate, which every secure template inherits): the frame is explicitly protected
+    if attrs.protected and isTrue(attrs.protected) then
+        s.isProtected = true
+    end
+    if attrs.movable then
+        frame:SetMovable(isTrue(attrs.movable))
+    end
+    if attrs.resizable then
+        frame:SetResizable(isTrue(attrs.resizable))
+    end
+    if attrs.dontSavePosition then
+        frame:SetDontSavePosition(isTrue(attrs.dontSavePosition))
+    end
+    if attrs.enableMouse then
+        frame:EnableMouse(isTrue(attrs.enableMouse))
+    end
     -- registerForDrag="LeftButton" (Edit Mode's selections, each system dragged by its own): as RegisterForDrag
     if attrs.registerForDrag and frame.RegisterForDrag then
         local buttons = {}
-        for name in attrs.registerForDrag:gmatch("[^,%s]+") do buttons[#buttons + 1] = name end
+        for name in attrs.registerForDrag:gmatch("[^,%s]+") do
+            buttons[#buttons + 1] = name
+        end
         frame:RegisterForDrag(unpack(buttons))
     end
-    if attrs.enableMouseClicks then frame:SetMouseClickEnabled(isTrue(attrs.enableMouseClicks)) end
-    if attrs.enableMouseMotion then frame:SetMouseMotionEnabled(isTrue(attrs.enableMouseMotion)) end
-    if attrs.enableKeyboard then frame:EnableKeyboard(isTrue(attrs.enableKeyboard)) end
-    if attrs.clampedToScreen then frame:SetClampedToScreen(isTrue(attrs.clampedToScreen)) end
-    if attrs.clipChildren then frame:SetClipsChildren(isTrue(attrs.clipChildren)) end
-    if attrs.ignoreParentAlpha then frame:SetIgnoreParentAlpha(isTrue(attrs.ignoreParentAlpha)) end
-    if attrs.ignoreParentScale then frame:SetIgnoreParentScale(isTrue(attrs.ignoreParentScale)) end
-    if attrs.id then frame:SetID(tonumber(attrs.id) or 0) end
-    if attrs.motionScriptsWhileDisabled and frame.SetMotionScriptsWhileDisabled then frame:SetMotionScriptsWhileDisabled(isTrue(attrs.motionScriptsWhileDisabled)) end
-    if attrs.registerForClicks and frame.RegisterForClicks then frame:RegisterForClicks(strsplit and attrs.registerForClicks or attrs.registerForClicks) end
-    if attrs.text and frame.SetText then frame:SetText(G[attrs.text] or attrs.text) end
-    if attrs.autoFocus and frame.SetAutoFocus then frame:SetAutoFocus(isTrue(attrs.autoFocus)) end
-    if attrs.multiLine and frame.SetMultiLine then frame:SetMultiLine(isTrue(attrs.multiLine)) end
-    if attrs.letters and frame.SetMaxLetters then frame:SetMaxLetters(tonumber(attrs.letters)) end
-    if attrs.numeric and frame.SetNumeric then frame:SetNumeric(isTrue(attrs.numeric)) end
-    if attrs.orientation and frame.SetOrientation then frame:SetOrientation(attrs.orientation) end
-    if attrs.minValue and frame.SetMinMaxValues then frame:SetMinMaxValues(tonumber(attrs.minValue) or 0, tonumber(attrs.maxValue) or 1) end
-    if attrs.valueStep and frame.SetValueStep then frame:SetValueStep(tonumber(attrs.valueStep)) end
-    if attrs.defaultValue and frame.SetValue then frame:SetValue(tonumber(attrs.defaultValue)) end
-    if attrs.hidden then s.shown = not isTrue(attrs.hidden); W.touchOrder(); sim.touch() end
+    if attrs.enableMouseClicks then
+        frame:SetMouseClickEnabled(isTrue(attrs.enableMouseClicks))
+    end
+    if attrs.enableMouseMotion then
+        frame:SetMouseMotionEnabled(isTrue(attrs.enableMouseMotion))
+    end
+    if attrs.enableKeyboard then
+        frame:EnableKeyboard(isTrue(attrs.enableKeyboard))
+    end
+    if attrs.clampedToScreen then
+        frame:SetClampedToScreen(isTrue(attrs.clampedToScreen))
+    end
+    if attrs.clipChildren then
+        frame:SetClipsChildren(isTrue(attrs.clipChildren))
+    end
+    if attrs.flattenRenderLayers and frame.SetFlattensRenderLayers then
+        frame:SetFlattensRenderLayers(isTrue(attrs.flattenRenderLayers))
+    end
+    if attrs.ignoreParentAlpha then
+        frame:SetIgnoreParentAlpha(isTrue(attrs.ignoreParentAlpha))
+    end
+    if attrs.ignoreParentScale then
+        frame:SetIgnoreParentScale(isTrue(attrs.ignoreParentScale))
+    end
+    if attrs.id then
+        frame:SetID(tonumber(attrs.id) or 0)
+    end
+    if attrs.motionScriptsWhileDisabled and frame.SetMotionScriptsWhileDisabled then
+        frame:SetMotionScriptsWhileDisabled(isTrue(attrs.motionScriptsWhileDisabled))
+    end
+    if attrs.registerForClicks and frame.RegisterForClicks then
+        frame:RegisterForClicks(attrs.registerForClicks)
+    end
+    if attrs.text and frame.SetText then
+        frame:SetText(G[attrs.text] or attrs.text)
+    end
+    if attrs.autoFocus and frame.SetAutoFocus then
+        frame:SetAutoFocus(isTrue(attrs.autoFocus))
+    end
+    if attrs.multiLine and frame.SetMultiLine then
+        frame:SetMultiLine(isTrue(attrs.multiLine))
+    end
+    if attrs.letters and frame.SetMaxLetters then
+        frame:SetMaxLetters(tonumber(attrs.letters))
+    end
+    if attrs.numeric and frame.SetNumeric then
+        frame:SetNumeric(isTrue(attrs.numeric))
+    end
+    if attrs.orientation and frame.SetOrientation then
+        frame:SetOrientation(attrs.orientation)
+    end
+    if attrs.minValue and frame.SetMinMaxValues then
+        frame:SetMinMaxValues(tonumber(attrs.minValue) or 0, tonumber(attrs.maxValue) or 1)
+    end
+    if attrs.valueStep and frame.SetValueStep then
+        frame:SetValueStep(tonumber(attrs.valueStep))
+    end
+    if attrs.defaultValue and frame.SetValue then
+        frame:SetValue(tonumber(attrs.defaultValue))
+    end
+    if attrs.hidden then
+        s.shown = not isTrue(attrs.hidden)
+        W.touchVisibility()
+        W.touchOrder()
+        W.touchLayoutOf(frame)
+    end
+    -- A message frame's own settings (the error banner's: displayDuration="2" fadeDuration=".5" insertMode="TOP")
+    local isMessageFrame = s.type == "MessageFrame" or s.type == "ScrollingMessageFrame"
+    if isMessageFrame then
+        s.timeVisible = tonumber(attrs.displayDuration) or s.timeVisible
+        s.fadeDuration = tonumber(attrs.fadeDuration) or s.fadeDuration
+        s.maxLines = tonumber(attrs.maxLines) or s.maxLines
+        if attrs.insertMode then
+            s.insertMode = attrs.insertMode == "TOP" and "TOP" or "BOTTOM"
+        end
+        if attrs.fade then
+            s.fading = isTrue(attrs.fade)
+        end
+    end
     for _, child in ipairs(element.children) do
         local tag = child.tag
-        if tag == "Animations" then
+        if tag == "FontString" and isMessageFrame then
+            -- Its text's font: <FontString inherits="ErrorFont" justifyH="CENTER"/>
+            local fontObject = child.attrs.inherits and G[child.attrs.inherits]
+            if fontObject then
+                frame:SetFontObject(fontObject)
+            end
+            if child.attrs.justifyH then
+                frame:SetJustifyH(child.attrs.justifyH)
+            end
+            if child.attrs.justifyV then
+                frame:SetJustifyV(child.attrs.justifyV)
+            end
+        elseif tag == "Animations" then
             xmlui.applyAnimations(frame, child)
         elseif tag == "Size" then
             local x, y = readDimension(child)
-            if x then s.width = x end
-            if y then s.height = y end
-            sim.touch()
+            if x then
+                s.width = x
+            end
+            if y then
+                s.height = y
+            end
+            W.touchLayoutOf(frame)
         elseif tag == "Anchors" then
             applyAnchors(frame, child)
         elseif tag == "Layers" then
@@ -436,7 +756,13 @@ applyFrameElement = function(frame, element, chunkName)
                 if layer.tag == "Layer" then
                     for _, regionElement in ipairs(layer.children) do
                         if REGION_TAGS[regionElement.tag] then
-                            buildRegion(frame, regionElement, layer.attrs.level or "ARTWORK", tonumber(layer.attrs.textureSubLevel) or 0, chunkName)
+                            buildRegion(
+                                frame,
+                                regionElement,
+                                layer.attrs.level or "ARTWORK",
+                                tonumber(layer.attrs.textureSubLevel) or 0,
+                                chunkName
+                            )
                         end
                     end
                 end
@@ -458,27 +784,45 @@ applyFrameElement = function(frame, element, chunkName)
             -- <Mixins><Mixin key="AuraContainerInboundMixin" .../>: each named mixin, as the mixin attribute does (its
             -- environments and partitions are the secure environment's; the simulator has one)
             for _, mixinElement in ipairs(child.children) do
-                if mixinElement.tag == "Mixin" and mixinElement.attrs.key then applyMixins(frame, { mixin = mixinElement.attrs.key }) end
+                if mixinElement.tag == "Mixin" and mixinElement.attrs.key then
+                    applyMixins(frame, { mixin = mixinElement.attrs.key })
+                end
             end
         elseif tag == "Attributes" then
             for _, attribute in ipairs(child.children) do
                 local value = attribute.attrs.value
-                if attribute.attrs.type == "number" then value = tonumber(value) elseif attribute.attrs.type == "boolean" then value = isTrue(value) end
+                if attribute.attrs.type == "number" then
+                    value = tonumber(value)
+                elseif attribute.attrs.type == "boolean" then
+                    value = isTrue(value)
+                end
                 -- Set as the frame is made, with no OnAttributeChanged: the frame is not whole yet (an action button's
                 -- handler reads its icon, made later from its layers)
                 frame:SetAttributeNoHandler(attribute.attrs.name, value)
             end
         elseif tag == "HitRectInsets" then
             local inset = xml.child(child, "AbsInset") or child
-            frame:SetHitRectInsets(readNumber(inset, "left", 0), readNumber(inset, "right", 0), readNumber(inset, "top", 0), readNumber(inset, "bottom", 0))
+            frame:SetHitRectInsets(
+                readNumber(inset, "left", 0),
+                readNumber(inset, "right", 0),
+                readNumber(inset, "top", 0),
+                readNumber(inset, "bottom", 0)
+            )
         elseif tag == "TextInsets" and frame.SetTextInsets then
             local inset = xml.child(child, "AbsInset") or child
-            frame:SetTextInsets(readNumber(inset, "left", 0), readNumber(inset, "right", 0), readNumber(inset, "top", 0), readNumber(inset, "bottom", 0))
+            frame:SetTextInsets(
+                readNumber(inset, "left", 0),
+                readNumber(inset, "right", 0),
+                readNumber(inset, "top", 0),
+                readNumber(inset, "bottom", 0)
+            )
         elseif tag == "ScrollChild" then
             for _, frameElement in ipairs(child.children) do
                 if FRAME_TAGS[frameElement.tag] or xmlui.intrinsics[frameElement.tag] then
                     local scrollChild = buildFrame(frameElement, frame, chunkName)
-                    if frame.SetScrollChild then frame:SetScrollChild(scrollChild) end
+                    if frame.SetScrollChild then
+                        frame:SetScrollChild(scrollChild)
+                    end
                 end
             end
         elseif tag == "FontString" and frame.SetFontObject then
@@ -491,10 +835,105 @@ applyFrameElement = function(frame, element, chunkName)
 end
 
 -- An animation group's animations, as the game makes them from XML: each one is the group's under its parentKey
--- (AutoCast's Anim group, the gamepad bars' Translation), with its timing; what they do on screen is not drawn
-local ANIMATION_TAGS = { Alpha = true, Translation = true, Rotation = true, Scale = true, LineScale = true, LineTranslation = true,
-    Path = true, FlipBook = true, TextureCoordTranslation = true, VertexColor = true, Animation = true,
-    RadialProgress = true } -- (Forever: the gamepad prompt's ring that fills while a button is held)
+-- (AutoCast's Anim group, the gamepad bars' Translation), with its timing, target and what it does (lua/animation.lua;
+-- the scene draws it)
+local ANIMATION_TAGS = {
+    Alpha = true,
+    Translation = true,
+    Rotation = true,
+    Scale = true,
+    LineScale = true,
+    LineTranslation = true,
+    Path = true,
+    FlipBook = true,
+    TextureCoordTranslation = true,
+    VertexColor = true,
+    Animation = true,
+    RadialProgress = true,
+} -- (Forever: the gamepad prompt's ring that fills while a button is held)
+
+---What an animation does, from its element's attributes and its Origin, StartColor and EndColor
+local function applyAnimationAttributes(animation, element)
+    local a = element.attrs
+    local function call(method, ...)
+        if animation[method] then
+            animation[method](animation, ...)
+        end
+    end
+    if a.endDelay then
+        call("SetEndDelay", tonumber(a.endDelay))
+    end
+    if a.smoothing then
+        call("SetSmoothing", a.smoothing)
+    end
+    if a.target then
+        call("SetTargetName", a.target)
+    end
+    if a.fromAlpha then
+        call("SetFromAlpha", tonumber(a.fromAlpha))
+    end
+    if a.toAlpha then
+        call("SetToAlpha", tonumber(a.toAlpha))
+    end
+    if a.change then
+        call("SetChange", tonumber(a.change))
+    end
+    if a.offsetX or a.offsetY then
+        call("SetOffset", tonumber(a.offsetX) or 0, tonumber(a.offsetY) or 0)
+    end
+    if a.offsetU or a.offsetV then
+        call("SetOffset", tonumber(a.offsetU) or 0, tonumber(a.offsetV) or 0)
+    end
+    if a.scaleX or a.scaleY then
+        call("SetScale", tonumber(a.scaleX) or 1, tonumber(a.scaleY) or 1)
+    end
+    if a.fromScaleX or a.fromScaleY then
+        call("SetScaleFrom", tonumber(a.fromScaleX) or 1, tonumber(a.fromScaleY) or 1)
+    end
+    if a.toScaleX or a.toScaleY then
+        call("SetScaleTo", tonumber(a.toScaleX) or 1, tonumber(a.toScaleY) or 1)
+    end
+    if a.degrees then
+        call("SetDegrees", tonumber(a.degrees))
+    end
+    if a.radians then
+        call("SetRadians", tonumber(a.radians))
+    end
+    if a.flipBookRows then
+        call("SetFlipBookRows", tonumber(a.flipBookRows))
+    end
+    if a.flipBookColumns then
+        call("SetFlipBookColumns", tonumber(a.flipBookColumns))
+    end
+    if a.flipBookFrames then
+        call("SetFlipBookFrames", tonumber(a.flipBookFrames))
+    end
+    if a.flipBookFrameWidth then
+        call("SetFlipBookFrameWidth", tonumber(a.flipBookFrameWidth))
+    end
+    if a.flipBookFrameHeight then
+        call("SetFlipBookFrameHeight", tonumber(a.flipBookFrameHeight))
+    end
+    for _, child in ipairs(element.children or {}) do
+        local tag = child.tag
+        if tag == "Origin" then
+            local offset = xml.child(child, "Offset")
+            local abs = offset and (xml.child(offset, "AbsDimension") or offset)
+            local x = abs and tonumber(abs.attrs.x) or 0
+            local y = abs and tonumber(abs.attrs.y) or 0
+            call("SetOrigin", child.attrs.point or "CENTER", x, y)
+        elseif tag == "StartColor" or tag == "EndColor" then
+            local c = child.attrs
+            call(
+                tag == "StartColor" and "SetStartColor" or "SetEndColor",
+                tonumber(c.r) or 1,
+                tonumber(c.g) or 1,
+                tonumber(c.b) or 1,
+                tonumber(c.a) or 1
+            )
+        end
+    end
+end
 
 ---Fills an animation group from its element: the templates it inherits first, then its mixin, key values and
 ---animations (the buff frame's warning fader is a template with a mixin, its Init called from the frame's OnLoad).
@@ -507,19 +946,37 @@ local function fillAnimationGroup(group, groupElement, depth)
         end
     end
     applyMixins(group, attrs)
-    if attrs.looping and group.SetLooping then group:SetLooping(attrs.looping) end
+    if attrs.looping and group.SetLooping then
+        group:SetLooping(attrs.looping)
+    end
+    if attrs.setToFinalAlpha and group.SetToFinalAlpha then
+        group:SetToFinalAlpha(isTrue(attrs.setToFinalAlpha))
+    end
     for _, animationElement in ipairs(groupElement.children) do
         if animationElement.tag == "KeyValues" then
             applyKeyValues(group, animationElement)
         elseif ANIMATION_TAGS[animationElement.tag] then
             local a = animationElement.attrs
             local animation = group:CreateAnimation(animationElement.tag, a.name)
-            if a.parentKey then group[a.parentKey] = animation end
-            if a.duration and animation.SetDuration then animation:SetDuration(tonumber(a.duration)) end
-            if a.order and animation.SetOrder then animation:SetOrder(tonumber(a.order)) end
-            if a.startDelay and animation.SetStartDelay then animation:SetStartDelay(tonumber(a.startDelay)) end
-            if a.childKey and animation.SetChildKey then animation:SetChildKey(a.childKey) end
-            if a.targetKey and animation.SetTargetKey then animation:SetTargetKey(a.targetKey) end
+            if a.parentKey then
+                group[a.parentKey] = animation
+            end
+            if a.duration and animation.SetDuration then
+                animation:SetDuration(tonumber(a.duration))
+            end
+            if a.order and animation.SetOrder then
+                animation:SetOrder(tonumber(a.order))
+            end
+            if a.startDelay and animation.SetStartDelay then
+                animation:SetStartDelay(tonumber(a.startDelay))
+            end
+            if a.childKey and animation.SetChildKey then
+                animation:SetChildKey(a.childKey)
+            end
+            if a.targetKey and animation.SetTargetKey then
+                animation:SetTargetKey(a.targetKey)
+            end
+            applyAnimationAttributes(animation, animationElement)
         end
     end
 end
@@ -531,11 +988,15 @@ end
 
 ---Makes an <Animations> element's groups on a frame or a region, each group's animations in it.
 function xmlui.applyAnimations(owner, element)
-    if not owner.CreateAnimationGroup then return end
+    if not owner.CreateAnimationGroup then
+        return
+    end
     for _, groupElement in ipairs(element.children) do
         if groupElement.tag == "AnimationGroup" then
             local group = owner:CreateAnimationGroup(groupElement.attrs.name)
-            if groupElement.attrs.parentKey then owner[groupElement.attrs.parentKey] = group end
+            if groupElement.attrs.parentKey then
+                owner[groupElement.attrs.parentKey] = group
+            end
             -- In a list on the owner as well, as frames and regions are (RogueComboPoint's transitionAnims)
             local arrayKey = groupElement.attrs.parentArray
             if arrayKey then
@@ -552,7 +1013,9 @@ function xmlui.applyTemplate(object, templateName)
     if template then
         -- A template's own parentKey / parentArray applies to what is made from it
         local parent = S[object] and S[object].parent
-        if parent then assignKeys(object, template.element.attrs, parent) end
+        if parent then
+            assignKeys(object, template.element.attrs, parent)
+        end
         if REGION_TAGS[template.element.tag] then
             applyRegionElement(object, template.element, template.chunkName)
         else
@@ -568,7 +1031,9 @@ local function applyPendingMasks()
     xmlui.pendingMasks = {}
     for _, pending in ipairs(list) do
         local target = pending.key and resolveKey(pending.frame, pending.key)
-        if target and target.AddMaskTexture then target:AddMaskTexture(pending.mask) end
+        if target and target.AddMaskTexture then
+            target:AddMaskTexture(pending.mask)
+        end
     end
 end
 
@@ -580,22 +1045,32 @@ local buildsOpen, pendingLoads = 0, {}
 -- region in it has the creator its outermost build has, worked out once (it was a walk up the stack for each region)
 local buildCreator
 function xmlui.beginBuild()
-    if buildsOpen == 0 then buildCreator = sim.getCallingAddon() end
+    if buildsOpen == 0 then
+        buildCreator = sim.getCallingAddon()
+    end
     buildsOpen = buildsOpen + 1
 end
 ---@return boolean isBuilding A frame is being built now
 ---@return string? creator The addon whose code set the build going (nil: the simulator's own, or the game's XML)
-function xmlui.getBuild() return buildsOpen > 0, buildCreator end
-function xmlui.queueLoad(frame) pendingLoads[#pendingLoads + 1] = frame end
+function xmlui.getBuild()
+    return buildsOpen > 0, buildCreator
+end
+function xmlui.queueLoad(frame)
+    pendingLoads[#pendingLoads + 1] = frame
+end
 function xmlui.endBuild()
     buildsOpen = buildsOpen - 1
-    if buildsOpen > 0 then return end
+    if buildsOpen > 0 then
+        return
+    end
     local loads = pendingLoads
     pendingLoads = {}
     -- Built whole, anchors and all: a named frame the player moved is put back where they left it (the layout cache)
     -- before any OnLoad, which may ask IsUserPlaced
     local layout = require("layout")
-    for _, frame in ipairs(loads) do layout.restore(frame) end
+    for _, frame in ipairs(loads) do
+        layout.restore(frame)
+    end
     for _, frame in ipairs(loads) do
         sim.runScript(frame, "OnLoad")
     end
@@ -603,7 +1078,9 @@ function xmlui.endBuild()
     -- (the personal resource display sets itself up there). Only once every frame built has loaded: a child's
     -- OnShow may call on its parent (the currency transfer's amount selector on its menu's callbacks)
     for _, frame in ipairs(loads) do
-        if frame:IsVisible() then sim.runScript(frame, "OnShow") end
+        if frame:IsVisible() then
+            sim.runScript(frame, "OnShow")
+        end
     end
 end
 
@@ -647,15 +1124,27 @@ function xmlui.loadFile(path, context, relativeFolder)
         return
     end
     local ui = root.children[1]
-    if not ui then return end
+    if not ui then
+        return
+    end
     local chunkName = path:gsub("^.-/Interface/", "Interface/")
     local handleElement
     handleElement = function(element)
         local tag = element.tag
+        -- (the client reads <script> and <include> in any case: LibDurability and LibLatency, which DBM ships, say
+        -- "<script file=...>"; read as unknown elements, their code never ran)
+        local lowered = tag:lower()
+        if lowered == "script" then
+            tag = "Script"
+        elseif lowered == "include" then
+            tag = "Include"
+        end
         if tag == "ScopedModifier" then
             -- Blizzard's wrapper round frames it protects (forbidden="true": the store): its frames are made all the
             -- same, as in the game; the protection itself is not simulated
-            for _, child in ipairs(element.children) do handleElement(child) end
+            for _, child in ipairs(element.children) do
+                handleElement(child)
+            end
         elseif tag == "Script" or tag == "Include" then
             local file = element.attrs.file
             if file then
@@ -665,7 +1154,9 @@ function xmlui.loadFile(path, context, relativeFolder)
                 if not target and relativeFolder ~= "" then
                     local fromRoot = file:gsub("/", "\\")
                     target = context.findPath(context.folder, fromRoot)
-                    if target then relative = fromRoot end
+                    if target then
+                        relative = fromRoot
+                    end
                 end
                 if not target then
                     sim.reportError("Couldn't open " .. context.name .. "\\" .. relative, "")
@@ -677,7 +1168,12 @@ function xmlui.loadFile(path, context, relativeFolder)
                 end
             elseif element.text then
                 local chunk, problem = loadstring(element.text, "@" .. chunkName)
-                if chunk then setfenv(chunk, G); sim.call(chunk) else sim.reportError(problem, "") end
+                if chunk then
+                    setfenv(chunk, G)
+                    sim.call(chunk)
+                else
+                    sim.reportError(problem, "")
+                end
             end
         elseif tag == "Font" or tag == "FontFamily" then
             require("fonts").loadGameFontElements({ element }, context.namedColors or {})
@@ -687,7 +1183,11 @@ function xmlui.loadFile(path, context, relativeFolder)
         elseif FRAME_TAGS[tag] or REGION_TAGS[tag] or xmlui.intrinsics[tag] then
             local attrs = element.attrs
             if isTrue(attrs.intrinsic) and attrs.name then
-                xmlui.intrinsics[attrs.name] = { element = element, chunkName = chunkName, baseType = FRAME_TAGS[tag] or (xmlui.intrinsics[tag] and xmlui.intrinsics[tag].baseType) or "Frame" }
+                xmlui.intrinsics[attrs.name] = {
+                    element = element,
+                    chunkName = chunkName,
+                    baseType = FRAME_TAGS[tag] or (xmlui.intrinsics[tag] and xmlui.intrinsics[tag].baseType) or "Frame",
+                }
                 FRAME_TAGS[attrs.name] = nil
             elseif isTrue(attrs.virtual) and attrs.name then
                 xmlui.templates[attrs.name] = { element = element, chunkName = chunkName }
@@ -699,9 +1199,15 @@ function xmlui.loadFile(path, context, relativeFolder)
                     for templateName in (names or ""):gmatch("[^,%s]+") do
                         local template = xmlui.templates[templateName]
                         local templateAttrs = template and template.element.attrs
-                        if templateAttrs and templateAttrs.parent then return templateAttrs.parent end
-                        local found = templateAttrs and depth < 20 and findTemplateParent(templateAttrs.inherits, depth + 1)
-                        if found then return found end
+                        if templateAttrs and templateAttrs.parent then
+                            return templateAttrs.parent
+                        end
+                        local found = templateAttrs
+                            and depth < 20
+                            and findTemplateParent(templateAttrs.inherits, depth + 1)
+                        if found then
+                            return found
+                        end
                     end
                 end
                 parentName = parentName or findTemplateParent(attrs.inherits, 0)
@@ -719,39 +1225,60 @@ end
 function xmlui.applyIntrinsic(frame, typeName)
     local intrinsic = xmlui.intrinsics[typeName]
     local s = S[frame]
-    if not intrinsic or s.isIntrinsicApplied then return end
+    if not intrinsic or s.isIntrinsicApplied then
+        return
+    end
     s.isIntrinsicApplied = true
     local ownScripts = s.scripts
     s.scripts = {}
     applyFrameElement(frame, intrinsic.element, intrinsic.chunkName)
     s.intrinsicScripts = s.scripts
-    for scriptName in pairs(s.intrinsicScripts) do W.watchScript(frame, scriptName) end
-    for scriptName, handler in pairs(ownScripts) do s.scripts[scriptName] = nil; ownScripts[scriptName] = handler end
+    for scriptName in pairs(s.intrinsicScripts) do
+        W.watchScript(frame, scriptName)
+    end
+    for scriptName, handler in pairs(ownScripts) do
+        s.scripts[scriptName] = nil
+        ownScripts[scriptName] = handler
+    end
     s.scripts = ownScripts
 end
 
 function W.getIntrinsic(typeName)
     for name, intrinsic in pairs(xmlui.intrinsics) do
-        if name:lower() == tostring(typeName):lower() then return intrinsic end
+        if name:lower() == tostring(typeName):lower() then
+            return intrinsic
+        end
     end
 end
 W.applyIntrinsic = function(frame, typeName)
     local intrinsic = W.getIntrinsic(typeName)
     if intrinsic then
         for name, candidate in pairs(xmlui.intrinsics) do
-            if candidate == intrinsic then return xmlui.applyIntrinsic(frame, name) end
+            if candidate == intrinsic then
+                return xmlui.applyIntrinsic(frame, name)
+            end
         end
     end
 end
 W.finishTemplates = xmlui.finishTemplates
-function W.getTemplate(name) return xmlui.templates[name] end
+function W.getTemplate(name)
+    return xmlui.templates[name]
+end
 
 ---What C_XMLUtil.GetTemplateInfo answers: the template's frame type, size and key values, inherited ones included.
 function xmlui.getTemplateInfo(templateName)
     local template = xmlui.templates[templateName]
-    if not template then return nil end
-    local info = { type = template.element.tag, width = 0, height = 0, keyValues = {}, inherits = template.element.attrs.inherits,
-        sourceLocation = template.chunkName }
+    if not template then
+        return nil
+    end
+    local info = {
+        type = template.element.tag,
+        width = 0,
+        height = 0,
+        keyValues = {},
+        inherits = template.element.attrs.inherits,
+        sourceLocation = template.chunkName,
+    }
     local seen = {}
     local function collect(element)
         for parentName in (element.attrs.inherits or ""):gmatch("[^,%s]+") do
@@ -768,8 +1295,12 @@ function xmlui.getTemplateInfo(templateName)
             elseif child.tag == "KeyValues" then
                 for _, keyValue in ipairs(child.children) do
                     if keyValue.tag == "KeyValue" then
-                        info.keyValues[#info.keyValues + 1] = { key = keyValue.attrs.key, keyType = keyValue.attrs.keyType or "string",
-                            type = keyValue.attrs.type or "string", value = keyValue.attrs.value or "" }
+                        info.keyValues[#info.keyValues + 1] = {
+                            key = keyValue.attrs.key,
+                            keyType = keyValue.attrs.keyType or "string",
+                            type = keyValue.attrs.type or "string",
+                            value = keyValue.attrs.value or "",
+                        }
                     end
                 end
             end
@@ -783,7 +1314,9 @@ G.C_XMLUtil = G.C_XMLUtil or {}
 G.C_XMLUtil.GetTemplateInfo = xmlui.getTemplateInfo
 G.C_XMLUtil.GetTemplates = function()
     local list = {}
-    for name, template in pairs(xmlui.templates) do list[#list + 1] = { name = name, type = template.element.tag } end
+    for name, template in pairs(xmlui.templates) do
+        list[#list + 1] = { name = name, type = template.element.tag }
+    end
     return list
 end
 sim.stackBoundaries[xmlui.loadFile] = true

@@ -5,10 +5,11 @@
 //       build is honoured: without it you get the retail file, whose atlas layouts differ; a missing file is
 //       200 + {"error":"File not found"}, an unknown build is 400
 //   https://github.com/wowdev/wow-listfile/releases/latest/download/community-listfile.csv
+import { APP_VERSION } from "../paths.ts";
 
 export const WAGO_URL = "https://wago.tools";
 export const LISTFILE_URL = "https://github.com/wowdev/wow-listfile/releases/latest/download/community-listfile.csv";
-export const USER_AGENT = "AddonSim/0.1";
+export const USER_AGENT = `AddonSim/${APP_VERSION}`;
 export const MAX_PARALLEL_DOWNLOADS = 6;
 
 export const cascUrl = (fdid: number, build: string): string => `${WAGO_URL}/api/casc/${fdid}?download&build=${build}`;

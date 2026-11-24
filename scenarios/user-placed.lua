@@ -13,7 +13,10 @@ local function makeFrames()
     end
     return made
 end
-local function placeDefault(frame) frame:ClearAllPoints(); frame:SetPoint("CENTER", G.UIParent, "CENTER", 0, 0) end
+local function placeDefault(frame)
+    frame:ClearAllPoints()
+    frame:SetPoint("CENTER", G.UIParent, "CENTER", 0, 0)
+end
 local function dragBy(frame, dx, dy)
     local x, y = frame:GetCenter()
     local screenY = G.GetScreenHeight() - y
@@ -40,11 +43,15 @@ expect(frames.UserPlacedNotSaved:GetDontSavePosition(), "GetDontSavePosition ans
 -- (the game's Stopwatch does this at PLAYER_LOGOUT, to keep its frame out of the cache)
 local unflagger = G.CreateFrame("Frame")
 unflagger:RegisterEvent("PLAYER_LOGOUT")
-unflagger:SetScript("OnEvent", function() G.UserPlacedCleared:SetUserPlaced(false) end)
+unflagger:SetScript("OnEvent", function()
+    G.UserPlacedCleared:SetUserPlaced(false)
+end)
 local keptX, keptY = frames.UserPlacedKept:GetCenter()
 local centerX, centerY = G.UIParent:GetCenter()
-expect(math.abs(keptX - (centerX + 200)) < 1 and math.abs(keptY - (centerY + 100)) < 1,
-    string.format("it moved with the cursor: %.0f, %.0f", keptX - centerX, keptY - centerY))
+expect(
+    math.abs(keptX - (centerX + 200)) < 1 and math.abs(keptY - (centerY + 100)) < 1,
+    string.format("it moved with the cursor: %.0f, %.0f", keptX - centerX, keptY - centerY)
+)
 
 slash("/reload")
 expect(G.UserPlacedKept == nil, "the old session's frames are gone after the reload")
@@ -57,19 +64,25 @@ frames = { UserPlacedKept = loaded }
 for _, name in ipairs({ "UserPlacedNotSaved", "UserPlacedCleared", "UserPlacedNever" }) do
     frames[name] = G.CreateFrame("Frame", name, G.UIParent)
 end
-for _, frame in pairs(frames) do frame:SetSize(120, 60) end
+for _, frame in pairs(frames) do
+    frame:SetSize(120, 60)
+end
 expect(seenInLoad, "a frame the player moved is user-placed again as soon as it is made")
 expect(not frames.UserPlacedNotSaved:IsUserPlaced(), "SetDontSavePosition(true) kept it out of the cache")
 expect(not frames.UserPlacedCleared:IsUserPlaced(), "SetUserPlaced(false) at PLAYER_LOGOUT kept it out")
 expect(not frames.UserPlacedNever:IsUserPlaced(), "a frame never moved is not user-placed")
 local x, y = frames.UserPlacedKept:GetCenter()
 centerX, centerY = G.UIParent:GetCenter()
-expect(math.abs(x - (centerX + 200)) < 1 and math.abs(y - (centerY + 100)) < 1,
-    string.format("it is back where the player left it: %.0f, %.0f", x - centerX, y - centerY))
+expect(
+    math.abs(x - (centerX + 200)) < 1 and math.abs(y - (centerY + 100)) < 1,
+    string.format("it is back where the player left it: %.0f, %.0f", x - centerX, y - centerY)
+)
 expect(frames.UserPlacedNotSaved:GetNumPoints() == 0, "the one not saved has no place until its addon gives it one")
 
 -- An addon that asks first leaves the player's place alone; one that places its frame at every login moves it back
-if not frames.UserPlacedKept:IsUserPlaced() then placeDefault(frames.UserPlacedKept) end
+if not frames.UserPlacedKept:IsUserPlaced() then
+    placeDefault(frames.UserPlacedKept)
+end
 x = frames.UserPlacedKept:GetCenter()
 expect(math.abs(x - (centerX + 200)) < 1, "asking IsUserPlaced first keeps the player's place")
 placeDefault(frames.UserPlacedKept)

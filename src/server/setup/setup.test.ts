@@ -7,8 +7,8 @@ import { join } from "node:path";
 import { resolveConfig } from "../config.ts";
 import { forever } from "../flavours/forever.ts";
 import { checkChange, defaultSettings, type StoredSettings } from "../settings.ts";
+import { listFolder } from "./browse.ts";
 import { checkFolder } from "./detect.ts";
-import { pickFolderCommand } from "./pickFolder.ts";
 
 describe("settings", () => {
   test("a change is checked key by key: the good kept, the bad refused with why", () => {
@@ -73,17 +73,28 @@ describe("folders", () => {
   });
 });
 
-describe.if(process.platform === "win32")("the folder dialog", () => {
-  test("its PowerShell parses, a quote in the path kept inside its string", () => {
-    for (const kind of ["addons", "interface", "luajit"] as const) {
-      const command = pickFolderCommand({ kind, startPath: "C:\\it's here" });
-      const script = command?.at(-1) ?? "";
-      const check = `$errors = $null; [void][System.Management.Automation.Language.Parser]::ParseInput([Console]::In.ReadToEnd(), [ref]$null, [ref]$errors); [Console]::Out.Write($errors.Count)`;
-      const result = Bun.spawnSync(["powershell.exe", "-NoProfile", "-Command", check], {
-        stdin: new TextEncoder().encode(script),
-        stdout: "pipe",
-      });
-      expect(result.stdout.toString().trim()).toBe("0");
+describe("the folder browser", () => {
+  test("lists a folder's folders, the AddOns folder pointed out, and checks the folder itself", () => {
+    const root = mkdtempSync(join(tmpdir(), "addonsim-browse-"));
+    try {
+      const addons = join(root, "Interface", "AddOns");
+      mkdirSync(join(addons, "Mine"), { recursive: true });
+      writeFileSync(join(addons, "Mine", "Mine.toc"), "## Title: Mine\n");
+      mkdirSync(join(root, ".hidden"));
+      writeFileSync(join(root, "notes.txt"), "");
+      const top = listFolder("addons", root, forever);
+      expect(top.entries.map((entry) => entry.name)).toEqual(["Interface"]);
+      expect(top.entries[0]?.hint).toBe("holds AddOns");
+      const inside = listFolder("addons", join(root, "Interface"), forever);
+      expect(inside.entries[0]?.hint).toBe("an AddOns folder");
+      expect(inside.parent).toBe(root);
+      expect(listFolder("addons", addons, forever).check?.isValid).toBe(true);
+      // (a folder that is not there: the nearest one that is, and said so)
+      const missing = listFolder("addons", join(addons, "Gone", "Deeper"), forever);
+      expect(missing.path).toBe(addons);
+      expect(missing.error).toContain("not there");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
     }
   });
 });

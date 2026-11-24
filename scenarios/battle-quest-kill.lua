@@ -11,21 +11,41 @@ G.SetCVar("nameplateShowEnemies", "1")
 
 local events = {}
 local listener = G.CreateFrame("Frame")
-for _, event in ipairs({ "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "PARTY_KILL", "UNIT_DIED", "PLAYER_XP_UPDATE", "CHAT_MSG_COMBAT_XP_GAIN",
-    "LOOT_OPENED", "LOOT_CLOSED", "PLAYER_MONEY", "PLAYER_ENTER_COMBAT", "PLAYER_LEAVE_COMBAT" }) do
+for _, event in ipairs({
+    "PLAYER_REGEN_DISABLED",
+    "PLAYER_REGEN_ENABLED",
+    "PARTY_KILL",
+    "UNIT_DIED",
+    "PLAYER_XP_UPDATE",
+    "CHAT_MSG_COMBAT_XP_GAIN",
+    "LOOT_OPENED",
+    "LOOT_CLOSED",
+    "PLAYER_MONEY",
+    "PLAYER_ENTER_COMBAT",
+    "PLAYER_LEAVE_COMBAT",
+}) do
     listener:RegisterEvent(event)
 end
-listener:SetScript("OnEvent", function(_, event, ...) events[#events + 1] = { event = event, ... } end)
+listener:SetScript("OnEvent", function(_, event, ...)
+    events[#events + 1] = { event = event, ... }
+end)
 local function count(name)
     local found = 0
-    for _, entry in ipairs(events) do if entry.event == name then found = found + 1 end end
+    for _, entry in ipairs(events) do
+        if entry.event == name then
+            found = found + 1
+        end
+    end
     return found
 end
 
 local first, ids = spawn(3111, { distance = 12, count = 2 }) -- Razormane Quilboar
 expect(ids and #ids == 2, "two quilboar stand 12 yards ahead")
 local quilboar = enemy(first)
-expect(quilboar.reaction == 2 and quilboar.level >= 6, "hostile, of the level the game's data gives them (" .. tostring(quilboar.level) .. ")")
+expect(
+    quilboar.reaction == 2 and quilboar.level >= 6,
+    "hostile, of the level the game's data gives them (" .. tostring(quilboar.level) .. ")"
+)
 expect(G.UnitName("nameplate1") == "Razormane Quilboar", "their nameplates are units with the game's name")
 wait(0.5)
 expect(G.UnitAffectingCombat("player") and G.InCombatLockdown(), "they see him and attack: he is in combat")
@@ -37,8 +57,14 @@ expect(enemy(first).isDead, "the first quilboar dies (in " .. math.floor(seconds
 expect(G.UnitIsDead("target"), "the target is its corpse")
 expect(count("PARTY_KILL") == 1 and count("UNIT_DIED") == 1, "the game tells of the kill: PARTY_KILL, UNIT_DIED")
 local objectives = G.C_QuestLog.GetQuestObjectives(837)
-expect(objectives[1] and objectives[1].numFulfilled == 1, "Encroachment counts the quilboar: " .. tostring(objectives[1] and objectives[1].text))
-expect(G.UnitXP("player") > 0 and count("CHAT_MSG_COMBAT_XP_GAIN") == 1, "experience for it (" .. G.UnitXP("player") .. ")")
+expect(
+    objectives[1] and objectives[1].numFulfilled == 1,
+    "Encroachment counts the quilboar: " .. tostring(objectives[1] and objectives[1].text)
+)
+expect(
+    G.UnitXP("player") > 0 and count("CHAT_MSG_COMBAT_XP_GAIN") == 1,
+    "experience for it (" .. G.UnitXP("player") .. ")"
+)
 expect(G.InCombatLockdown(), "still in combat: the second quilboar fights on")
 
 fight(ids[2], { slots = { 2 } })
@@ -46,8 +72,10 @@ expect(enemy(ids[2]).isDead, "the second dies too")
 expect(G.C_QuestLog.GetQuestObjectives(837)[1].numFulfilled == 2, "two quilboar counted")
 expect(not G.InCombatLockdown() and not G.UnitAffectingCombat("player"), "the fight over, he is out of combat")
 expect(count("PLAYER_REGEN_ENABLED") == 1, "PLAYER_REGEN_ENABLED, once")
-expect(G.UnitHealth("player") > 0 and G.UnitHealth("player") < G.UnitHealthMax("player"), "he took some blows ("
-    .. G.UnitHealth("player") .. " of " .. G.UnitHealthMax("player") .. ")")
+expect(
+    G.UnitHealth("player") > 0 and G.UnitHealth("player") < G.UnitHealthMax("player"),
+    "he took some blows (" .. G.UnitHealth("player") .. " of " .. G.UnitHealthMax("player") .. ")"
+)
 
 -- The corpses' loot: money, as most creatures carry
 local money = G.GetMoney()

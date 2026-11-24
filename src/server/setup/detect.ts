@@ -76,6 +76,16 @@ const findGameFolders = (): { path: string; source: string }[] => {
     const isClientFolder = /^_.+_$/.test(install.split(/[\\/]/).at(-1) ?? "");
     found.push({ path: isClientFolder ? dirname(install) : install, source: "from the registry" });
   }
+  // In a container: the host's folders mounted into it (a drive, a home, the game's own folder), each and the folders
+  // in it (one mount per drive) looked at as a drive is
+  const browseRoot = process.env.ADDONSIM_BROWSE;
+  if (browseRoot && isFolder(browseRoot)) {
+    for (const base of [browseRoot, ...listFolders(browseRoot).map((name) => join(browseRoot, name))]) {
+      const source = `in ${base}`;
+      found.push({ path: base, source });
+      for (const folder of DRIVE_FOLDERS) found.push({ path: join(base, ...folder.split("\\")), source });
+    }
+  }
   if (process.platform === "win32") {
     for (let code = 67; code <= 90; code++) {
       const drive = `${String.fromCharCode(code)}:\\`;

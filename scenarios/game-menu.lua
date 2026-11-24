@@ -8,7 +8,11 @@ dropdown:SetWidth(150)
 dropdown:SetupMenu(function(_, root)
     root:CreateTitle("Pick one")
     for index = 1, 5 do
-        root:CreateRadio("Entry " .. index, function() return picked == index end, function() picked = index end)
+        root:CreateRadio("Entry " .. index, function()
+            return picked == index
+        end, function()
+            picked = index
+        end)
     end
 end)
 
@@ -26,7 +30,9 @@ local long = G.CreateFrame("DropdownButton", nil, G.UIParent, "WowStyle1Dropdown
 long:SetPoint("TOP", G.UIParent, "TOP", 0, -40)
 long:SetupMenu(function(_, root)
     root:SetScrollMode(200)
-    for index = 1, 30 do root:CreateButton("Row " .. index, function() end) end
+    for index = 1, 30 do
+        root:CreateButton("Row " .. index, function() end)
+    end
 end)
 click(long)
 wait(0.2)

@@ -2,22 +2,23 @@
 // done (in the page) starts the Lua host (LuaJIT, the game's Lua 5.1, with the addons), ticks its clock, and streams
 // the frames it draws with the game's real art.
 //
-//     bun run start            (or the executable bun run build makes), then open http://127.0.0.1:8765/
+//     bun run start            then open http://127.0.0.1:8765/ (in Docker: the Dockerfile, docs/docker.md)
 //     bun run start --project <dir>    serve a project (its addonsim.config.ts): its addons, plugins, Lua path
 //
 // Settings are kept by the app in the user's settings folder (paths.ts), changed from the page's setup. Started in a
 // project's folder (one with an addonsim.config.ts, or below one), it serves that project without being told.
+import { join } from "node:path";
 import { selectServedProject, takeProjectFlag } from "../project/select.ts";
 import index from "../ui/index.html";
 import { watchAddons } from "./addonWatcher.ts";
 import { App } from "./app.ts";
+import { pruneBootCache } from "./bootCache.ts";
 import { runClock } from "./clock.ts";
 import { findFlavour } from "./flavours/index.ts";
 import { json, notFound } from "./http/respond.ts";
 import { createRoutes } from "./http/routes.ts";
-import { unpackLua } from "./luaBundle.ts";
 import { openBrowser } from "./openBrowser.ts";
-import { APP_VERSION, IS_STANDALONE, ROOT, SETTINGS_PATH } from "./paths.ts";
+import { APP_VERSION, CACHE_DIR, ROOT, SETTINGS_PATH } from "./paths.ts";
 import type { InputEvent } from "./sceneStream.ts";
 
 type PageData = { needsWhole: boolean };
@@ -25,9 +26,26 @@ type SocketMessage = { t?: string; e?: InputEvent };
 
 /** Ports tried after the settings' one when it is taken by something else */
 const SPARE_PORTS = 10;
+// The address the page is served on: this machine only, unless told (ADDONSIM_HOST=0.0.0.0 in a container, whose port
+// is published to the machine running it)
+const HOST = process.env.ADDONSIM_HOST || "127.0.0.1";
+// The browser is opened for a first run, unless told not to (ADDONSIM_NO_BROWSER=1: a container, a background server)
+const mayOpenBrowser = (): boolean =>
+  app.settings.openBrowser && !process.env.ADDONSIM_PORT && process.env.ADDONSIM_NO_BROWSER !== "1";
 
-const unpacked = await unpackLua();
-if (unpacked > 0) console.log(`Unpacked the simulator's ${unpacked} Lua files into ${ROOT}`);
+// The boot cache's entries no recent run used, deleted (once a day, after the start: it never holds the game up)
+setTimeout(() => {
+  try {
+    const pruned = pruneBootCache(join(CACHE_DIR, "boot"));
+    if (pruned.files > 0) {
+      console.log(
+        `Boot cache: deleted ${pruned.files} entries no recent run used (${(pruned.bytes / 1e6).toFixed(0)} MB)`,
+      );
+    }
+  } catch (error) {
+    console.warn(`Boot cache: not pruned (${error})`);
+  }
+}, 30_000).unref();
 
 const project = await selectServedProject(takeProjectFlag(process.argv.slice(2)).projectDir);
 const app = new App(project);
@@ -71,11 +89,14 @@ const routes = Object.fromEntries(
 /** The page's server, on the settings' port (ADDONSIM_PORT: another, beside a server already running) */
 const serve = (port: number): ReturnType<typeof Bun.serve<PageData>> =>
   Bun.serve<PageData>({
-    hostname: "127.0.0.1",
+    hostname: HOST,
     port,
-    // From the sources, Bun transpiles the page as it serves it (no hot reload: the game screen keeps its socket and
-    // state, and a change to the page is seen at the next refresh); the executable serves the page built into it
-    development: IS_STANDALONE ? false : { hmr: false, console: false },
+    // A request may wait on the game booting again (an addon switched on, a reload: many addons take a while), longer
+    // than Bun's 10 seconds; its longest wait, 255 s
+    idleTimeout: 255,
+    // Bun transpiles the page as it serves it (no hot reload: the game screen keeps its socket and state, and a change
+    // to the page is seen at the next refresh)
+    development: { hmr: false, console: false },
     routes: { "/": index, "/index.html": index, ...routes },
     fetch: (request, bunServer) => {
       const url = new URL(request.url);
@@ -128,7 +149,7 @@ const startServer = async (): Promise<ReturnType<typeof serve> | null> => {
       if (port === asked && (await isAddonSimAt(port))) {
         const url = `http://127.0.0.1:${port}/`;
         console.log(`AddonSim already runs on ${url}; opening it.`);
-        if (app.settings.openBrowser && !process.env.ADDONSIM_PORT) openBrowser(url);
+        if (mayOpenBrowser()) openBrowser(url);
         return null;
       }
       console.log(`Port ${port} is taken; trying ${port + 1}.`);
@@ -140,7 +161,8 @@ const startServer = async (): Promise<ReturnType<typeof serve> | null> => {
 const server = await startServer();
 if (!server) process.exit(0);
 
-const url = server.url.href;
+// (served on every address: shown as this machine's, which is what a browser beside it opens)
+const url = HOST === "0.0.0.0" || HOST === "::" ? `http://localhost:${server.port}/` : server.url.href;
 const flavour = findFlavour(app.settings.flavour);
 const isReady = app.isReady;
 const lines = [
@@ -159,9 +181,8 @@ const lines = [
   "",
 ];
 console.log(lines.join("\n"));
-// The browser opened for the executable (double-clicked, it has nothing else to show) and for a first run from the
-// sources; not at each restart of bun run dev
-if (app.settings.openBrowser && !process.env.ADDONSIM_PORT && (IS_STANDALONE || !isReady)) openBrowser(url);
+// The browser opened for a first run (the setup to do); not at each restart of bun run dev
+if (mayOpenBrowser() && !isReady) openBrowser(url);
 
 void runClock(host, stream, config);
 void watchAddons(host, config, project);

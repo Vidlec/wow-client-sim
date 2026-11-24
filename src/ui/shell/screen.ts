@@ -1,5 +1,5 @@
-// The game screen the shell mounted (GameView), for the panels that talk to it: the inspector, the view's zoom and
-// renderer, the virtual pad, the status strip's drawing figures
+// The game screen the shell mounted (GameView), for the panels that talk to it: the inspector, the view's zoom, the
+// virtual pad, the status strip's drawing figures
 import { useEffect, useState, useSyncExternalStore } from "react";
 import type { ConnectedPad, DrawStats, GameScreen, InspectedFrame, Listener, Unsubscribe } from "../engine/types.ts";
 

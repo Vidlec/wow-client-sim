@@ -27,6 +27,20 @@ export type StreamPerf = {
   worstWaitMs?: number;
 };
 
+/**
+ * A frame for the pages: its JSON as text, or (with a binary scene, lua/stream.lua) one binary message: the header's
+ * length (u32, little-endian), the header's JSON, then the binary scene (src/ui/engine/binaryFrame.ts)
+ */
+const toPageMessage = (text: string, bin: Uint8Array | undefined): string | Uint8Array => {
+  if (!bin) return text;
+  const header = new TextEncoder().encode(text);
+  const message = new Uint8Array(4 + header.length + bin.length);
+  new DataView(message.buffer).setUint32(0, header.length, true);
+  message.set(header, 4);
+  message.set(bin, 4 + header.length);
+  return message;
+};
+
 /** The host's run added to the object as written: "{...}" -> "{..., "generation": N}" */
 export const withGeneration = (text: string, generation: number): string => {
   if (!text.endsWith("}")) return text;
@@ -133,17 +147,22 @@ export class SceneStream {
    * After each tick: the frame the simulator wrote (a change, or only its counts) to the pages, and the whole scene
    * to those that need it
    */
-  async publish(host: LuaHost, text: string): Promise<void> {
+  async publish(host: LuaHost, text: string, bin?: Uint8Array): Promise<void> {
     const generation = host.generation;
     if (generation !== this.#generation) {
       this.#generation = generation;
       for (const page of this.#pages) page.data.needsWhole = true;
     }
     const version = Number(/"version":(-?\d+)/.exec(text)?.[1] ?? Number.NaN);
-    const status = /"errors":\d+,"chat":\d+/.exec(text)?.[0] ?? null;
+    // (the counts and the pointer: a frame goes out when either changes, though nothing on the screen did)
+    const counts = /"errors":\d+,"chat":\d+/.exec(text)?.[0] ?? "";
+    const cursor = /,"cursor":("(?:[^"\\]|\\.)*"|\d+)/.exec(text)?.[1] ?? "";
+    const status = `${counts}|${cursor}`;
     const isDelta = text.includes('"delta":true');
-    if (isDelta || status !== this.#lastStatus) {
-      const framed = withGeneration(text, generation);
+    // (a frame with sounds to start or stop goes out though nothing on the screen changed)
+    const hasSounds = text.includes('"sounds":');
+    if (isDelta || hasSounds || status !== this.#lastStatus) {
+      const framed = toPageMessage(withGeneration(text, generation), bin);
       for (const page of this.#pages) {
         if (page.data.needsWhole) continue;
         // Behind: what it has not drawn is dropped, and it starts again from a whole scene
@@ -154,7 +173,8 @@ export class SceneStream {
     this.#lastStatus = status;
     const waiting = [...this.#pages].filter((page) => page.data.needsWhole);
     if (waiting.length > 0) {
-      const whole = withGeneration(await host.requestRaw({ op: "sceneWhole" }), generation);
+      const answer = await host.requestWithBinary({ op: "sceneWhole", binary: true });
+      const whole = toPageMessage(withGeneration(answer.text, generation), answer.bin);
       for (const page of waiting) {
         page.data.needsWhole = false;
         page.send(whole);
@@ -171,11 +191,20 @@ export class SceneStream {
   async waitWhole(host: LuaHost, since: number | null): Promise<string | null> {
     this.#legacyAskedAt = performance.now();
     if (since !== null && this.#version === since && host.generation === this.#generation) {
+      let waiter: (() => void) | undefined;
       const changed = await Promise.race([
-        new Promise<boolean>((resolve) => this.#versionWaiters.push(() => resolve(true))),
+        new Promise<boolean>((resolve) => {
+          waiter = () => resolve(true);
+          this.#versionWaiters.push(waiter);
+        }),
         Bun.sleep(POLL_WAIT_MS).then(() => false),
       ]);
-      if (!changed) return null;
+      if (!changed) {
+        // (no longer waited on: a paused game polled twice a second would gather them otherwise)
+        const at = waiter ? this.#versionWaiters.indexOf(waiter) : -1;
+        if (at >= 0) this.#versionWaiters.splice(at, 1);
+        return null;
+      }
     }
     return withGeneration(await host.requestRaw({ op: "sceneWhole" }), host.generation);
   }

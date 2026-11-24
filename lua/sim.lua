@@ -31,7 +31,11 @@ end
 local findFiles
 if sim.isWindows then
     local isLoaded, ffi = pcall(require, "ffi")
-    if isLoaded and pcall(ffi.cdef, [[
+    if
+        isLoaded
+        and pcall(
+            ffi.cdef,
+            [[
         typedef struct { uint32_t low, high; } AddonSimFileTime;
         typedef struct {
             uint32_t attributes; AddonSimFileTime created, accessed, written; uint32_t sizeHigh, sizeLow, reserved0, reserved1;
@@ -42,7 +46,9 @@ if sim.isWindows then
         int FindClose(void* handle);
         int MultiByteToWideChar(unsigned int page, uint32_t flags, const char* text, int length, uint16_t* wide, int wideLength);
         int WideCharToMultiByte(unsigned int page, uint32_t flags, const uint16_t* wide, int wideLength, char* text, int length, const char* fallback, int* isFallbackUsed);
-    ]]) then
+    ]]
+        )
+    then
         local kernel = ffi.C
         local UTF8 = 65001
         local INVALID = ffi.cast("void*", -1)
@@ -55,27 +61,35 @@ if sim.isWindows then
             kernel.MultiByteToWideChar(UTF8, 0, pattern, #pattern + 1, wide, wideLength)
             local handle = kernel.FindFirstFileW(wide, data)
             local names = {}
-            if handle == INVALID then return names end
+            if handle == INVALID then
+                return names
+            end
             repeat
                 local length = kernel.WideCharToMultiByte(UTF8, 0, data.name, -1, nameBuffer, 1040, nil, nil)
                 local name = length > 0 and ffi.string(nameBuffer, length - 1) or nil
-                if name and name ~= "." and name ~= ".." then names[#names + 1] = name end
+                if name and name ~= "." and name ~= ".." then
+                    names[#names + 1] = name
+                end
             until kernel.FindNextFileW(handle, data) == 0
             kernel.FindClose(handle)
-            table.sort(names, function(a, b) return a:lower() < b:lower() end) -- (as "dir /b" gives them)
+            table.sort(names, function(a, b)
+                return a:lower() < b:lower()
+            end) -- (as "dir /b" gives them)
             return names
         end
     end
 end
 
 -- A folder's names, kept for the process's life: the game's interface and the addons do not change under a running
--- simulator (a changed addon restarts it). sim.forgetDirectories() lets them go (a folder made, files written)
+-- simulator (a changed addon restarts it)
 local listings = {}
 
 ---@return string[] names The names in a folder (files and folders), none when it is missing
 function sim.listDirectory(path)
     local kept = listings[path]
-    if kept then return kept end
+    if kept then
+        return kept
+    end
     local names = findFiles and findFiles(path)
     if not names then
         names = {}
@@ -83,7 +97,9 @@ function sim.listDirectory(path)
             or ('ls -1 "' .. path:gsub('"', '\\"') .. '" 2>/dev/null')
         local handle = io.popen(command)
         if handle then
-            for name in handle:lines() do names[#names + 1] = name end
+            for name in handle:lines() do
+                names[#names + 1] = name
+            end
             handle:close()
         end
     end
@@ -97,13 +113,13 @@ function sim.getDirectoryIndex(path)
     local index = listings[path .. "|index"]
     if not index then
         index = {}
-        for _, name in ipairs(names) do index[name:lower()] = name end
+        for _, name in ipairs(names) do
+            index[name:lower()] = name
+        end
         listings[path .. "|index"] = index
     end
     return index
 end
-
-function sim.forgetDirectories() listings = {} end
 
 ---Makes a folder and the folders above it, when they are missing.
 function sim.makeDirectory(path)
@@ -120,13 +136,15 @@ function sim.findNewestFile(root, sub, fileName)
     local command
     if sim.isWindows then
         -- Every match below the root, newest first within each folder; one account is the usual case
-        command = 'dir /b /s /o-d "' .. toSystemPath(root) .. '\\' .. fileName .. '" 2>nul'
+        command = 'dir /b /s /o-d "' .. toSystemPath(root) .. "\\" .. fileName .. '" 2>nul'
     else
-        command = 'ls -t "' .. root .. '/"*/' .. sub .. '/' .. fileName .. ' 2>/dev/null'
+        command = 'ls -t "' .. root .. '/"*/' .. sub .. "/" .. fileName .. " 2>/dev/null"
     end
     local handle = io.popen(command)
     local path = handle and handle:read("*l")
-    if handle then handle:close() end
+    if handle then
+        handle:close()
+    end
     return path ~= "" and path or nil
 end
 
@@ -135,15 +153,26 @@ function sim.newId()
     return sim.nextId
 end
 
-function sim.touch()
+-- An object's own drawing changed (sim.touch(object), sim.touchVisual(object)): its visual version moves on, and the
+-- scene builds its items again (lua/scene.lua keeps each region's items while nothing they come from changed). Set by
+-- lua/widgets.lua.
+sim.markChanged = function() end
+
+function sim.touch(object)
     sim.version = sim.version + 1
     sim.layoutVersion = (sim.layoutVersion or 0) + 1
+    if object then
+        sim.markChanged(object)
+    end
 end
 
 -- A change to how something looks that moves nothing (a colour, an alpha, the mouse over a button, shown or hidden):
 -- the scene is drawn again, but the rectangles worked out stay (no setter of size, anchor, scale, text or font)
-function sim.touchVisual()
+function sim.touchVisual(object)
     sim.version = sim.version + 1
+    if object then
+        sim.markChanged(object)
+    end
 end
 
 -- Bumped at every change to any rectangle, the whole layout's (sim.touch) or one object's (W.touchLayoutOf): what
@@ -194,7 +223,11 @@ local function traceback(message)
     local lines = {}
     for line in stack:gmatch("[^\n]+") do
         -- (the simulator's own files by either slash: Windows writes its paths with backslashes)
-        if not line:find("^stack traceback") and not line:find("AddonSim[/\\]lua[/\\]") and not line:find("%[C%]: in function 'xpcall'") then
+        if
+            not line:find("^stack traceback")
+            and not line:find("AddonSim[/\\]lua[/\\]")
+            and not line:find("%[C%]: in function 'xpcall'")
+        then
             lines[#lines + 1] = line
         end
     end
@@ -223,7 +256,10 @@ end
 local function makeClock()
     local isLoaded, ffi = pcall(require, "ffi")
     if isLoaded and ffi.os == "Windows" then
-        local isDeclared = pcall(ffi.cdef, "int QueryPerformanceCounter(int64_t *count); int QueryPerformanceFrequency(int64_t *frequency);")
+        local isDeclared = pcall(
+            ffi.cdef,
+            "int QueryPerformanceCounter(int64_t *count); int QueryPerformanceFrequency(int64_t *frequency);"
+        )
         if isDeclared then
             local counter, frequency = ffi.new("int64_t[1]"), ffi.new("int64_t[1]")
             ffi.C.QueryPerformanceFrequency(frequency)
@@ -234,7 +270,10 @@ local function makeClock()
             end
         end
     elseif isLoaded then
-        local isDeclared = pcall(ffi.cdef, "typedef struct { long tv_sec; long tv_nsec; } addonsim_timespec; int clock_gettime(int clock, addonsim_timespec *time);")
+        local isDeclared = pcall(
+            ffi.cdef,
+            "typedef struct { long tv_sec; long tv_nsec; } addonsim_timespec; int clock_gettime(int clock, addonsim_timespec *time);"
+        )
         if isDeclared then
             local time = ffi.new("addonsim_timespec")
             return function()
@@ -243,7 +282,9 @@ local function makeClock()
             end
         end
     end
-    return function() return os.clock() * 1000 end
+    return function()
+        return os.clock() * 1000
+    end
 end
 sim.clock = makeClock()
 
@@ -254,7 +295,9 @@ sim.profiler = { byAddon = {}, ticks = 0, isOn = true }
 local functionAddons = setmetatable({}, { __mode = "k" }) -- [function] = its addon's name, or false
 local function getFunctionAddon(fn)
     local known = functionAddons[fn]
-    if known ~= nil then return known end
+    if known ~= nil then
+        return known
+    end
     local info = debug.getinfo(fn, "S")
     local addon = info and info.source and info.source:match("^@Interface/AddOns/([^/]+)/") or false
     functionAddons[fn] = addon
@@ -283,11 +326,15 @@ function sim.endProfilerTick()
         local spent = entry.tick
         entry.tick, entry.last = 0, spent
         entry.total = entry.total + spent
-        if spent > entry.peak then entry.peak = spent end
+        if spent > entry.peak then
+            entry.peak = spent
+        end
         entry.recentIndex = entry.recentIndex % 60 + 1
         entry.recent[entry.recentIndex] = spent
         for index, limit in ipairs(OVER_LIMITS) do
-            if spent > limit then entry.over[index] = (entry.over[index] or 0) + 1 end
+            if spent > limit then
+                entry.over[index] = (entry.over[index] or 0) + 1
+            end
         end
     end
 end
@@ -346,23 +393,43 @@ end
 sim.restrictions = { identity = false, threat = false }
 local secretValues = setmetatable({}, { __mode = "k" })
 local secretMeta = {
-    __index = function() error("attempt to index a secret value", 2) end,
-    __newindex = function() error("attempt to index a secret value", 2) end,
-    __concat = function() error("attempt to concatenate a secret value", 2) end,
-    __lt = function() error("attempt to compare a secret value", 2) end,
-    __le = function() error("attempt to compare a secret value", 2) end,
-    __len = function() error("attempt to get the length of a secret value", 2) end,
-    __call = function() error("attempt to call a secret value", 2) end,
-    __tostring = function() return "<secret>" end,
+    __index = function()
+        error("attempt to index a secret value", 2)
+    end,
+    __newindex = function()
+        error("attempt to index a secret value", 2)
+    end,
+    __concat = function()
+        error("attempt to concatenate a secret value", 2)
+    end,
+    __lt = function()
+        error("attempt to compare a secret value", 2)
+    end,
+    __le = function()
+        error("attempt to compare a secret value", 2)
+    end,
+    __len = function()
+        error("attempt to get the length of a secret value", 2)
+    end,
+    __call = function()
+        error("attempt to call a secret value", 2)
+    end,
+    __tostring = function()
+        return "<secret>"
+    end,
 }
 ---@return any value The value as a secret, when the game would hide it in the current situation
 function sim.hide(value, restriction)
-    if value == nil or not sim.restrictions[restriction] then return value end
+    if value == nil or not sim.restrictions[restriction] then
+        return value
+    end
     local secret = setmetatable({}, secretMeta)
     secretValues[secret] = true
     return secret
 end
-function sim.isSecret(value) return type(value) == "table" and secretValues[value] == true end
+function sim.isSecret(value)
+    return type(value) == "table" and secretValues[value] == true
+end
 
 sim.stubCallers = {} -- [name] = { [addon] = true }: the addons (not the game's own code) that reached it
 -- The functions that only stand in for the client's (made from its documentation or the recorder's list): a better
@@ -380,19 +447,19 @@ end
 -- Each function's addon, worked out once (its source names the addon's folder): the stack is walked by function,
 -- which is cheap, rather than by source, which builds strings at every level. The walk stops at a depth no addon's
 -- code lies under (the game's XML being built has none on the stack at all, and walked it whole for each region)
-local functionAddons = setmetatable({}, { __mode = "k" }) -- [function] = addon folder, or false
+local folderAddons = setmetatable({}, { __mode = "k" }) -- [function] = addon folder, or false
 local MAX_STACK_WALK = 40
 local getinfo = debug.getinfo
-local function getFunctionAddon(fn)
-    local addon = functionAddons[fn]
+local function getFunctionFolderAddon(fn)
+    local addon = folderAddons[fn]
     if addon == nil then
         local info = getinfo(fn, "S")
         addon = info and info.source and info.source:match("^@Interface/AddOns/([^/]+)/") or false
-        functionAddons[fn] = addon
+        folderAddons[fn] = addon
     end
     return addon
 end
-sim.getFunctionFolderAddon = getFunctionAddon
+sim.getFunctionFolderAddon = getFunctionFolderAddon
 
 -- The simulator's own ways in (an addon's files loaded, an XML file built): no addon's code lies above them, so a
 -- walk that reaches one stops (the regions of the game's XML were each walked the whole way up)
@@ -402,11 +469,17 @@ local boundaries = sim.stackBoundaries
 function sim.getCallingAddon()
     for level = 3, MAX_STACK_WALK do
         local info = getinfo(level, "f")
-        if not info then return nil end
+        if not info then
+            return nil
+        end
         local fn = info.func
-        if boundaries[fn] then return nil end
-        local addon = fn and getFunctionAddon(fn)
-        if addon then return addon end
+        if boundaries[fn] then
+            return nil
+        end
+        local addon = fn and getFunctionFolderAddon(fn)
+        if addon then
+            return addon
+        end
     end
     return nil
 end
@@ -417,8 +490,10 @@ function sim.noteStub(name)
     -- map, opened by an addon's call), the game's code reached it, not the addon
     for level = 2, MAX_STACK_WALK do
         local info = getinfo(level, "f")
-        if not info or boundaries[info.func] then break end
-        local addon = info.func and getFunctionAddon(info.func)
+        if not info or boundaries[info.func] then
+            break
+        end
+        local addon = info.func and getFunctionFolderAddon(info.func)
         if addon then
             if not addon:match("^Blizzard_") then
                 sim.stubCallers[name] = sim.stubCallers[name] or {}
@@ -436,16 +511,22 @@ function sim.registerEvent(frame, event)
     sim.eventFrames[event] = sim.eventFrames[event] or {}
     sim.eventFrames[event][frame] = true
     local filters = sim.unitEventFilters[frame]
-    if filters then filters[event] = nil end
+    if filters then
+        filters[event] = nil
+    end
 end
 
 function sim.setUnitEventFilter(frame, event, ...)
     local units = {}
     for index = 1, select("#", ...) do
         local unit = select(index, ...)
-        if type(unit) == "string" and unit ~= "" then units[unit:lower()] = true end
+        if type(unit) == "string" and unit ~= "" then
+            units[unit:lower()] = true
+        end
     end
-    if next(units) == nil then return end
+    if next(units) == nil then
+        return
+    end
     sim.unitEventFilters[frame] = sim.unitEventFilters[frame] or {}
     sim.unitEventFilters[frame][event] = units
 end
@@ -455,7 +536,9 @@ function sim.unregisterEvent(frame, event)
         sim.eventFrames[event][frame] = nil
     end
     local filters = sim.unitEventFilters[frame]
-    if filters then filters[event] = nil end
+    if filters then
+        filters[event] = nil
+    end
 end
 
 function sim.unregisterAllEvents(frame)
@@ -483,7 +566,9 @@ function sim.fireEvent(event, ...)
             frames[#frames + 1] = frame
         end
     end
-    table.sort(frames, function(first, second) return sim.getId(first) < sim.getId(second) end)
+    table.sort(frames, function(first, second)
+        return sim.getId(first) < sim.getId(second)
+    end)
     local unit = ...
     local filters = sim.unitEventFilters
     for _, frame in ipairs(frames) do
@@ -503,7 +588,13 @@ end
 
 -- Timers
 function sim.addTimer(seconds, callback, iterations)
-    local timer = { at = sim.now + math.max(seconds or 0, 0), callback = callback, interval = math.max(seconds or 0, 0), iterations = iterations or 1, cancelled = false }
+    local timer = {
+        at = sim.now + math.max(seconds or 0, 0),
+        callback = callback,
+        interval = math.max(seconds or 0, 0),
+        iterations = iterations or 1,
+        cancelled = false,
+    }
     sim.timers[#sim.timers + 1] = timer
     return timer
 end
@@ -515,11 +606,25 @@ local tickFrame
 function sim.tick(elapsed)
     return sim.runSecurely(tickFrame, elapsed)
 end
+-- Where the ticks' time went since last asked (handlers.perf): the world, timers, OnUpdate scripts, size changes
+sim.tickSums = { world = 0, timers = 0, updates = 0, sizes = 0 }
+-- (what the size watchers' passes did since last asked: lua/widgets.lua's W.fireSizeChanges)
+sim.sizeCounts = { passes = 0, whole = 0, scrolls = 0, measured = 0, fired = 0 }
 tickFrame = function(elapsed)
+    local clock = sim.clock
+    local started = clock()
     sim.now = sim.now + elapsed
     sim.lastElapsed = elapsed -- (GetTickTime)
     -- The world moves on first (the character walking), then timers and OnUpdate see where it is
-    for _, handler in ipairs(sim.tickHandlers or {}) do sim.call(handler, elapsed) end
+    for _, handler in ipairs(sim.tickHandlers or {}) do
+        sim.call(handler, elapsed)
+    end
+    -- An animation playing changes the picture every frame (lua/animation.lua)
+    -- (and while a cooldown's swipe runs: sim.liveVisuals)
+    if (sim.isAnimating and sim.isAnimating()) or (sim.liveVisuals and next(sim.liveVisuals)) then
+        sim.touchVisual()
+    end
+    local worldDone = clock()
     local due = {}
     for index = #sim.timers, 1, -1 do
         local timer = sim.timers[index]
@@ -536,12 +641,15 @@ tickFrame = function(elapsed)
             end
         end
     end
-    table.sort(due, function(first, second) return first.at < second.at end)
+    table.sort(due, function(first, second)
+        return first.at < second.at
+    end)
     for _, timer in ipairs(due) do
         if not timer.cancelled then
             sim.call(timer.callback, timer.handle)
         end
     end
+    local timersDone = clock()
     -- In the order they were made, sorted again only when one starts or stops updating
     if updatingVersion ~= sim.onUpdateVersion then
         updatingVersion = sim.onUpdateVersion
@@ -549,16 +657,26 @@ tickFrame = function(elapsed)
         for frame in pairs(sim.onUpdateFrames) do
             updating[#updating + 1] = frame
         end
-        table.sort(updating, function(first, second) return sim.getId(first) < sim.getId(second) end)
+        table.sort(updating, function(first, second)
+            return sim.getId(first) < sim.getId(second)
+        end)
     end
     for _, frame in ipairs(updating) do
         if frame:IsVisible() then
             sim.runScript(frame, "OnUpdate", elapsed)
         end
     end
+    local updatesDone = clock()
     local W = package.loaded["widgets"]
-    if W and W.fireSizeChanges then W.fireSizeChanges() end
+    if W and W.fireSizeChanges then
+        W.fireSizeChanges()
+    end
     sim.endProfilerTick()
+    local sums = sim.tickSums
+    sums.world = sums.world + (worldDone - started)
+    sums.timers = sums.timers + (timersDone - worldDone)
+    sums.updates = sums.updates + (updatesDone - timersDone)
+    sums.sizes = sums.sizes + (clock() - updatesDone)
 end
 
 ---Every event name the game's own interface code uses: the documentation leaves some out (TRIAL_STATUS_UPDATE,
@@ -568,11 +686,14 @@ function sim.addInterfaceEvents(interfaceRoot, cachePath)
     local names = {}
     local cached = cachePath and io.open(cachePath)
     if cached then
-        for name in cached:lines() do names[#names + 1] = name end
+        for name in cached:lines() do
+            names[#names + 1] = name
+        end
         cached:close()
     else
         local seen = {}
-        local command = sim.isWindows and ('dir /s /b "' .. interfaceRoot:gsub("/", "\\") .. '\\*.lua" 2>nul') or ('find "' .. interfaceRoot .. '" -name "*.lua"')
+        local command = sim.isWindows and ('dir /s /b "' .. interfaceRoot:gsub("/", "\\") .. '\\*.lua" 2>nul')
+            or ('find "' .. interfaceRoot .. '" -name "*.lua"')
         local list = io.popen(command)
         for path in list:lines() do
             local file = io.open(path)
@@ -580,18 +701,24 @@ function sim.addInterfaceEvents(interfaceRoot, cachePath)
                 local text = file:read("*a")
                 file:close()
                 for name in text:gmatch('"([%u][%u%d]*_[%u%d_]+)"') do
-                    if not seen[name] then seen[name], names[#names + 1] = true, name end
+                    if not seen[name] then
+                        seen[name], names[#names + 1] = true, name
+                    end
                 end
             end
         end
         list:close()
         local out = cachePath and io.open(cachePath, "w")
         if out then
-            for _, name in ipairs(names) do out:write(name, "\n") end
+            for _, name in ipairs(names) do
+                out:write(name, "\n")
+            end
             out:close()
         end
     end
-    for _, name in ipairs(names) do sim.knownEvents[name] = true end
+    for _, name in ipairs(names) do
+        sim.knownEvents[name] = true
+    end
     return #names
 end
 

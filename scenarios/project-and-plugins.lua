@@ -1,8 +1,8 @@
 --@addons QuestieDB, SimFixture
 -- A project as the simulator runs it (the self-test project, src/project/select.ts): its own addon found in its own
 -- folder, its saved variables kept across a reload, its Lua module folder ahead of the simulator's, its plugin's party
--- addon and step (lua/plugins.lua). Also the party's addons: a member runs none unless one is named, Questie's
--- member (built in, through the same API) speaks Questie's protocol, and the plugin's member answers its own.
+-- addon and step (lua/plugins.lua). Also the party's addons: a member runs none unless one is named, and the
+-- plugin's member answers its own protocol.
 local addons = require("addons")
 local plugins = require("plugins")
 local QUEST = 844 -- Plainstrider Menace
@@ -10,22 +10,31 @@ local QUEST = 844 -- Plainstrider Menace
 -- The project's addon, from the project's folder
 local fixture = addons.byName["simfixture"]
 expect(fixture and addons.loaded.SimFixture, "the fixture addon loaded")
-expect(fixture and fixture.folder:gsub("\\", "/"):find("scenarios/fixtures/addons/SimFixture", 1, true) ~= nil,
-    "from the project's folder (" .. tostring(fixture and fixture.folder) .. ")")
+expect(
+    fixture and fixture.folder:gsub("\\", "/"):find("scenarios/fixtures/addons/SimFixture", 1, true) ~= nil,
+    "from the project's folder (" .. tostring(fixture and fixture.folder) .. ")"
+)
 expect(G.SimFixtureDB and G.SimFixtureDB.logins == 1, "its saved variables start fresh")
 expect(#fixture.private.marks == 5, "its marks are on the minimap")
 slash("/simfixture marks")
 expectChat("SimFixture: 5 marks")
 
 -- The project's Lua modules come first
-expect(package.searchpath("fixturelib", package.path):gsub("\\", "/"):find("fixtures/lib/fixturelib.lua", 1, true) ~= nil,
-    "require finds the project's module folder")
+expect(
+    package.searchpath("fixturelib", package.path):gsub("\\", "/"):find("fixtures/lib/fixturelib.lua", 1, true) ~= nil,
+    "require finds the project's module folder"
+)
 
--- The party addons the page lists: none (the default), the simulator's Questie, the plugin's
+-- The party addons the page lists: none (the default), and the plugin's (a project's own: none are built in)
 local listed = {}
-for _, entry in ipairs(plugins.describePartyAddons()) do listed[entry.id] = entry end
+for _, entry in ipairs(plugins.describePartyAddons()) do
+    listed[entry.id] = entry
+end
 expect(listed.none and listed.none.isDefault, "a member runs no addon by default")
-expect(listed.Questie and listed.SimFixture, "Questie's member and the plugin's are listed")
+expect(
+    listed.SimFixture and not listed.Questie,
+    "the plugin's member is listed, and no addon's built into the simulator"
+)
 
 setProfile({ level = 14, race = "Scourge", class = "MAGE" })
 moveTo(1413, 0.52, 0.31)
@@ -38,7 +47,9 @@ joinParty({ name = "Fixie", class = "MAGE", addon = "SimFixture" })
 wait(0.5)
 local function heardText(text)
     for _, message in ipairs(fixtureHeard()) do
-        if message.text == text then return message end
+        if message.text == text then
+            return message
+        end
     end
 end
 expect(heardText("HELLO"), "the plugin's member greets the party")
@@ -56,16 +67,6 @@ wait(0.3)
 expect(heardText("Q|" .. QUEST .. "|gone"), "and says when it drops the quest")
 leaveParty("Fixie")
 expect(require("fixturelib").left[1] == "Fixie", "its addon hears it leave")
-
--- Questie's member, built in: its messages on Questie's channel
-local questieHeard = 0
-local listener = G.CreateFrame("Frame")
-listener:RegisterEvent("CHAT_MSG_ADDON")
-listener:SetScript("OnEvent", function(_, _, prefix) if prefix == "questie" then questieHeard = questieHeard + 1 end end)
-joinParty({ name = "Questa", class = "PRIEST", addon = "Questie" })
-memberAccept("Questa", QUEST)
-wait(1)
-expect(questieHeard >= 2, "Questie's member sends its request and log on joining, and its change (" .. questieHeard .. ")")
 
 -- A reload keeps the addon's saved variables, and boots the plugin again
 reload()

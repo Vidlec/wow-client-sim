@@ -2,7 +2,6 @@
 // sends the input back (engine/index.ts implements it). The shell never touches the screen's DOM; the engine never
 // renders any of the page's controls.
 
-export type Renderer = "gl" | "dom";
 export type Magnify = 1 | 2 | 3 | 4;
 
 /** What the server's socket says of each frame, besides the scene itself */
@@ -19,8 +18,9 @@ export type StreamStatus = {
   error: string | null;
 };
 
-/** How the page keeps up drawing (the server's own clock is in the state's perf) */
-export type DrawStats = { drawsPerSecond: number; renderer: Renderer; drawMs: number };
+/** How the page keeps up drawing (the server's own clock is in the state's perf); hasGpu: drawing with WebGPU
+ * (false: not yet, or the browser has none) */
+export type DrawStats = { drawsPerSecond: number; hasGpu: boolean; drawMs: number };
 
 /** A frame under the mouse, as the inspector lists it (the server's /api/inspect) */
 export type InspectedFrame = {
@@ -63,7 +63,6 @@ export type GameScreen = {
   /** Keys go to the game again (after a click on the page's controls) */
   focus: () => void;
   setMagnify: (magnify: Magnify) => void;
-  setRenderer: (renderer: Renderer) => void;
   /** The loading screen of the continent the character is on, behind the interface, as the game draws its world */
   setWorldBackdrop: (uiMapId: number | null) => void;
   /** Called after the container changes size (the side panel folding); the screen fits itself again */
@@ -93,5 +92,4 @@ export type GameScreen = {
 
 export type GameScreenOptions = {
   magnify?: Magnify;
-  renderer?: Renderer;
 };

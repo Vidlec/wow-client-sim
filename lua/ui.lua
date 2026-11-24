@@ -8,13 +8,17 @@ local ui = {}
 local G = sim.G
 local S = W.state
 
-local function createFrame(...) return W.createFrame(...) end
+local function createFrame(...)
+    return W.createFrame(...)
+end
 
 -- Tooltips: lines of font strings, sized to fit, placed by their owner
 local tooltipMethods = {}
 -- The padding round the tooltip's lines (SetPadding) back to none
 tooltipMethods.ClearPadding = function(self)
-    if self.SetPadding then self:SetPadding(0, 0, 0, 0) end
+    if self.SetPadding then
+        self:SetPadding(0, 0, 0, 0)
+    end
 end
 local function getTooltipLine(tooltip, index, side)
     local s = S[tooltip]
@@ -23,8 +27,16 @@ local function getTooltipLine(tooltip, index, side)
     if not line then
         local name = s.name or "Tooltip"
         line = {
-            left = tooltip:CreateFontString(name .. "TextLeft" .. index, "ARTWORK", index == 1 and "GameTooltipHeaderText" or "GameTooltipText"),
-            right = tooltip:CreateFontString(name .. "TextRight" .. index, "ARTWORK", index == 1 and "GameTooltipHeaderText" or "GameTooltipText"),
+            left = tooltip:CreateFontString(
+                name .. "TextLeft" .. index,
+                "ARTWORK",
+                index == 1 and "GameTooltipHeaderText" or "GameTooltipText"
+            ),
+            right = tooltip:CreateFontString(
+                name .. "TextRight" .. index,
+                "ARTWORK",
+                index == 1 and "GameTooltipHeaderText" or "GameTooltipText"
+            ),
         }
         S[line.left].justifyH, S[line.right].justifyH = "LEFT", "RIGHT"
         s.lines[index] = line
@@ -36,18 +48,30 @@ function tooltipMethods:SetOwner(owner, anchor, x, y)
     s.owner, s.anchor, s.anchorX, s.anchorY = owner, anchor or "ANCHOR_RIGHT", x or 0, y or 0
     self:ClearLines()
 end
-function tooltipMethods:GetOwner() return S[self].owner end
-function tooltipMethods:IsOwned(frame) return S[self].owner == frame end
-function tooltipMethods:SetAnchorType(anchor, x, y) local s = S[self]; s.anchor, s.anchorX, s.anchorY = anchor, x or 0, y or 0 end
-function tooltipMethods:GetAnchorType() return S[self].anchor end
+function tooltipMethods:GetOwner()
+    return S[self].owner
+end
+function tooltipMethods:IsOwned(frame)
+    return S[self].owner == frame
+end
+function tooltipMethods:SetAnchorType(anchor, x, y)
+    local s = S[self]
+    s.anchor, s.anchorX, s.anchorY = anchor, x or 0, y or 0
+end
+function tooltipMethods:GetAnchorType()
+    return S[self].anchor
+end
 function tooltipMethods:ClearLines()
     local s = S[self]
     for _, line in ipairs(s.lines or {}) do
-        line.left:SetText(nil); line.left:Hide()
-        line.right:SetText(nil); line.right:Hide()
+        line.left:SetText(nil)
+        line.left:Hide()
+        line.right:SetText(nil)
+        line.right:Hide()
     end
     s.lineCount = 0
     s.itemId = nil
+    s.unit = nil -- (GetUnit answers nothing once the tooltip is about something else)
     sim.runScript(self, "OnTooltipCleared")
     sim.touch()
 end
@@ -57,7 +81,9 @@ function tooltipMethods:AddLine(text, r, g, b, isWrapped)
     local line = getTooltipLine(self, s.lineCount)
     line.left:SetText(text or " ")
     line.left:SetTextColor(r or 1, g or 0.82, b or 0, 1)
-    if s.lineCount > 1 and r == nil then line.left:SetTextColor(1, 1, 1, 1) end
+    if s.lineCount > 1 and r == nil then
+        line.left:SetTextColor(1, 1, 1, 1)
+    end
     S[line.left].tooltipWrap = isWrapped
     line.left:Show()
     line.right:Hide()
@@ -67,8 +93,12 @@ function tooltipMethods:AddDoubleLine(left, right, lr, lg, lb, rr, rg, rb)
     local s = S[self]
     s.lineCount = (s.lineCount or 0) + 1
     local line = getTooltipLine(self, s.lineCount)
-    line.left:SetText(left or " "); line.left:SetTextColor(lr or 1, lg or 1, lb or 1); line.left:Show()
-    line.right:SetText(right or " "); line.right:SetTextColor(rr or 1, rg or 1, rb or 1); line.right:Show()
+    line.left:SetText(left or " ")
+    line.left:SetTextColor(lr or 1, lg or 1, lb or 1)
+    line.left:Show()
+    line.right:SetText(right or " ")
+    line.right:SetTextColor(rr or 1, rg or 1, rb or 1)
+    line.right:Show()
     sim.touch()
 end
 function tooltipMethods:SetText(text, r, g, b, a, isWrapped)
@@ -79,16 +109,24 @@ end
 function tooltipMethods:AppendText(text)
     local s = S[self]
     local line = s.lines and s.lines[s.lineCount or 1]
-    if line then line.left:SetText((line.left:GetText() or "") .. text) end
+    if line then
+        line.left:SetText((line.left:GetText() or "") .. text)
+    end
 end
-function tooltipMethods:NumLines() return S[self].lineCount or 0 end
-function tooltipMethods:SetMinimumWidth(width) S[self].minimumWidth = width end
+function tooltipMethods:NumLines()
+    return S[self].lineCount or 0
+end
+function tooltipMethods:SetMinimumWidth(width)
+    S[self].minimumWidth = width
+end
 function tooltipMethods:SetPadding() end
 function tooltipMethods:AddTexture() end
 function tooltipMethods:AddSpellByID() end
 function tooltipMethods:SetHyperlink(link)
     local itemId = tostring(link):match("item:(%d+)")
-    if itemId then return self:SetItemByID(tonumber(itemId)) end
+    if itemId then
+        return self:SetItemByID(tonumber(itemId))
+    end
     self:AddLine(tostring(link))
 end
 function tooltipMethods:SetItemByID(itemId)
@@ -96,44 +134,75 @@ function tooltipMethods:SetItemByID(itemId)
     self:AddLine(name or ("Item " .. tostring(itemId)), 1, 1, 1)
     S[self].itemId = itemId
     -- Then every post-call addons registered for item tooltip data, as the game runs them (a bag slot, a link, an id)
-    local data = { type = G.Enum and G.Enum.TooltipDataType and G.Enum.TooltipDataType.Item or 0, id = itemId, lines = {} }
-    for _, handler in ipairs(ui.tooltipPostCalls[data.type] or {}) do sim.call(handler, self, data) end
-    for _, handler in ipairs(ui.tooltipPostCalls.ALL or {}) do sim.call(handler, self, data) end
+    local data =
+        { type = G.Enum and G.Enum.TooltipDataType and G.Enum.TooltipDataType.Item or 0, id = itemId, lines = {} }
+    for _, handler in ipairs(ui.tooltipPostCalls[data.type] or {}) do
+        sim.call(handler, self, data)
+    end
+    for _, handler in ipairs(ui.tooltipPostCalls.ALL or {}) do
+        sim.call(handler, self, data)
+    end
     sim.runScript(self, "OnTooltipSetItem")
 end
-function tooltipMethods:SetSpellByID(spellId) self:AddLine("Spell " .. tostring(spellId), 1, 1, 1) end
-function tooltipMethods:SetQuestLogItem(kind, index, questId) self:AddLine("Quest reward", 1, 1, 1) end
-function tooltipMethods:SetQuestItem() self:AddLine("Quest item", 1, 1, 1) end
-function tooltipMethods:SetUnit(unit) self:AddLine(G.UnitName(unit) or unit, 1, 1, 1) end
+function tooltipMethods:SetSpellByID(spellId)
+    self:AddLine("Spell " .. tostring(spellId), 1, 1, 1)
+end
+function tooltipMethods:SetQuestLogItem(kind, index, questId)
+    self:AddLine("Quest reward", 1, 1, 1)
+end
+function tooltipMethods:SetQuestItem()
+    self:AddLine("Quest item", 1, 1, 1)
+end
 function tooltipMethods:SetBagItem() end
 function tooltipMethods:SetInventoryItem() end
 function tooltipMethods:GetItem()
     local itemId = S[self].itemId
-    if not itemId then return nil end
+    if not itemId then
+        return nil
+    end
     local name = G.C_Item.GetItemInfo(itemId)
     return name, string.format("|cffffffff|Hitem:%d::::::::::::|h[%s]|h|r", itemId, name or ("Item " .. itemId))
 end
-function tooltipMethods:GetSpell() return nil end
-function tooltipMethods:GetUnit() return nil end
-function tooltipMethods:FadeOut() self:Hide() end
-function tooltipMethods:IsTooltipType() return false end
-function tooltipMethods:GetTooltipData() return nil end
-function tooltipMethods:SetCustomLineSpacing(spacing) S[self].customLineSpacing = spacing end
-function tooltipMethods:GetCustomLineSpacing() return S[self].customLineSpacing end
+function tooltipMethods:GetSpell()
+    return nil
+end
+function tooltipMethods:FadeOut()
+    self:Hide()
+end
+function tooltipMethods:IsTooltipType()
+    return false
+end
+function tooltipMethods:GetTooltipData()
+    return nil
+end
+function tooltipMethods:SetCustomLineSpacing(spacing)
+    S[self].customLineSpacing = spacing
+end
+function tooltipMethods:GetCustomLineSpacing()
+    return S[self].customLineSpacing
+end
 function tooltipMethods:SetTooltipData() end
 -- The rest of the client's tooltip methods (api-report.txt listed them as missing): kept as set, drawn as plain lines
 -- (an atlas line as AddTexture is: not drawn). Whether an empty tooltip shows (SetAllowShowWithNoLines) is not
 -- measured yet: the recorder's "tooltips" probe asks; Show here shows it either way, as it did.
 function tooltipMethods:AddAtlas() end
-function tooltipMethods:SetAllowShowWithNoLines(isAllowed) S[self].allowShowWithNoLines = isAllowed and true or false end
-function tooltipMethods:SetCustomWordWrapMinWidth(width) S[self].customWordWrapMinWidth = width end
-function tooltipMethods:SetShrinkToFitWrapped(isShrinking) S[self].shrinkToFitWrapped = isShrinking and true or false end
+function tooltipMethods:SetAllowShowWithNoLines(isAllowed)
+    S[self].allowShowWithNoLines = isAllowed and true or false
+end
+function tooltipMethods:SetCustomWordWrapMinWidth(width)
+    S[self].customWordWrapMinWidth = width
+end
+function tooltipMethods:SetShrinkToFitWrapped(isShrinking)
+    S[self].shrinkToFitWrapped = isShrinking and true or false
+end
 function tooltipMethods:SetObjectTooltipPosition() end
 function tooltipMethods:SetFrameStack() end
 ---Another tooltip's lines, owner and anchor, as the game's CopyTooltip
 function tooltipMethods:CopyTooltip(source)
     local from = source and S[source]
-    if not from then return end
+    if not from then
+        return
+    end
     local s = S[self]
     s.owner, s.anchor, s.anchorX, s.anchorY = from.owner, from.anchor, from.anchorX, from.anchorY
     self:ClearLines()
@@ -188,14 +257,22 @@ function ui.layoutTooltip(tooltip)
     if owner and anchor ~= "ANCHOR_NONE" and anchor ~= "ANCHOR_PRESERVE" then
         S[tooltip].points = {}
         local x, offsetY = s.anchorX or 0, s.anchorY or 0
-        if anchor == "ANCHOR_RIGHT" then tooltip:SetPoint("BOTTOMLEFT", owner, "TOPRIGHT", x, offsetY)
-        elseif anchor == "ANCHOR_LEFT" then tooltip:SetPoint("BOTTOMRIGHT", owner, "TOPLEFT", x, offsetY)
-        elseif anchor == "ANCHOR_TOP" then tooltip:SetPoint("BOTTOM", owner, "TOP", x, offsetY)
-        elseif anchor == "ANCHOR_BOTTOM" then tooltip:SetPoint("TOP", owner, "BOTTOM", x, offsetY)
-        elseif anchor == "ANCHOR_TOPLEFT" then tooltip:SetPoint("BOTTOMLEFT", owner, "TOPLEFT", x, offsetY)
-        elseif anchor == "ANCHOR_TOPRIGHT" then tooltip:SetPoint("BOTTOMRIGHT", owner, "TOPRIGHT", x, offsetY)
-        elseif anchor == "ANCHOR_BOTTOMLEFT" then tooltip:SetPoint("TOPRIGHT", owner, "BOTTOMLEFT", x, offsetY)
-        elseif anchor == "ANCHOR_BOTTOMRIGHT" then tooltip:SetPoint("TOPLEFT", owner, "BOTTOMRIGHT", x, offsetY)
+        if anchor == "ANCHOR_RIGHT" then
+            tooltip:SetPoint("BOTTOMLEFT", owner, "TOPRIGHT", x, offsetY)
+        elseif anchor == "ANCHOR_LEFT" then
+            tooltip:SetPoint("BOTTOMRIGHT", owner, "TOPLEFT", x, offsetY)
+        elseif anchor == "ANCHOR_TOP" then
+            tooltip:SetPoint("BOTTOM", owner, "TOP", x, offsetY)
+        elseif anchor == "ANCHOR_BOTTOM" then
+            tooltip:SetPoint("TOP", owner, "BOTTOM", x, offsetY)
+        elseif anchor == "ANCHOR_TOPLEFT" then
+            tooltip:SetPoint("BOTTOMLEFT", owner, "TOPLEFT", x, offsetY)
+        elseif anchor == "ANCHOR_TOPRIGHT" then
+            tooltip:SetPoint("BOTTOMRIGHT", owner, "TOPRIGHT", x, offsetY)
+        elseif anchor == "ANCHOR_BOTTOMLEFT" then
+            tooltip:SetPoint("TOPRIGHT", owner, "BOTTOMLEFT", x, offsetY)
+        elseif anchor == "ANCHOR_BOTTOMRIGHT" then
+            tooltip:SetPoint("TOPLEFT", owner, "BOTTOMRIGHT", x, offsetY)
         else
             local mouse = sim.mouse or { x = 0, y = 0 }
             tooltip:SetPoint("BOTTOMLEFT", G.UIParent, "BOTTOMLEFT", mouse.x + 16, mouse.y + 16)
@@ -217,40 +294,106 @@ local function newDescription()
     local methods = {}
     local function addElement(kind, text, extra)
         local element = { kind = kind, text = text, enabled = true }
-        for key, value in pairs(extra or {}) do element[key] = value end
+        for key, value in pairs(extra or {}) do
+            element[key] = value
+        end
         local elementMethods = {}
-        function elementMethods:SetTooltip(handler) self.tooltip = handler; return self end
-        function elementMethods:SetEnabled(isEnabled) self.enabled = isEnabled ~= false; return self end
-        function elementMethods:SetResponder(responder) self.responder = responder; return self end
-        function elementMethods:SetResponse(response) self.response = response; return self end
-        function elementMethods:AddInitializer(initializer) self.initializers = self.initializers or {}; table.insert(self.initializers, initializer); return self end
-        function elementMethods:SetData(data) self.data = data; return self end
-        function elementMethods:GetData() return self.data end
-        function elementMethods:SetIsSelected(handler) self.isSelected = handler; return self end
-        function elementMethods:SetSelectionIgnored() return self end
-        function elementMethods:SetRadio() return self end
-        function elementMethods:SetCanSelect() return self end
-        function elementMethods:SetShouldRespondIfSubmenu() return self end
-        function elementMethods:SetOnEnter() return self end
-        function elementMethods:SetOnLeave() return self end
-        function elementMethods:SetTitleAndTextTooltip() return self end
-        function elementMethods:CreateButton(...) return methods.CreateButton(self, ...) end
-        function elementMethods:CreateRadio(...) return methods.CreateRadio(self, ...) end
-        function elementMethods:CreateCheckbox(...) return methods.CreateCheckbox(self, ...) end
-        function elementMethods:CreateTitle(...) return methods.CreateTitle(self, ...) end
-        function elementMethods:CreateDivider(...) return methods.CreateDivider(self, ...) end
-        function elementMethods:CreateSpacer(...) return methods.CreateSpacer(self, ...) end
+        function elementMethods:SetTooltip(handler)
+            self.tooltip = handler
+            return self
+        end
+        function elementMethods:SetEnabled(isEnabled)
+            self.enabled = isEnabled ~= false
+            return self
+        end
+        function elementMethods:SetResponder(responder)
+            self.responder = responder
+            return self
+        end
+        function elementMethods:SetResponse(response)
+            self.response = response
+            return self
+        end
+        function elementMethods:AddInitializer(initializer)
+            self.initializers = self.initializers or {}
+            table.insert(self.initializers, initializer)
+            return self
+        end
+        function elementMethods:SetData(data)
+            self.data = data
+            return self
+        end
+        function elementMethods:GetData()
+            return self.data
+        end
+        function elementMethods:SetIsSelected(handler)
+            self.isSelected = handler
+            return self
+        end
+        function elementMethods:SetSelectionIgnored()
+            return self
+        end
+        function elementMethods:SetRadio()
+            return self
+        end
+        function elementMethods:SetCanSelect()
+            return self
+        end
+        function elementMethods:SetShouldRespondIfSubmenu()
+            return self
+        end
+        function elementMethods:SetOnEnter()
+            return self
+        end
+        function elementMethods:SetOnLeave()
+            return self
+        end
+        function elementMethods:SetTitleAndTextTooltip()
+            return self
+        end
+        function elementMethods:CreateButton(...)
+            return methods.CreateButton(self, ...)
+        end
+        function elementMethods:CreateRadio(...)
+            return methods.CreateRadio(self, ...)
+        end
+        function elementMethods:CreateCheckbox(...)
+            return methods.CreateCheckbox(self, ...)
+        end
+        function elementMethods:CreateTitle(...)
+            return methods.CreateTitle(self, ...)
+        end
+        function elementMethods:CreateDivider(...)
+            return methods.CreateDivider(self, ...)
+        end
+        function elementMethods:CreateSpacer(...)
+            return methods.CreateSpacer(self, ...)
+        end
         setmetatable(element, { __index = elementMethods })
         table.insert(description.elements, element)
         return element
     end
-    function methods.CreateButton(_, text, callback, data) return addElement("button", text, { callback = callback, data = data }) end
-    function methods.CreateRadio(_, text, isSelected, setSelected, data) return addElement("radio", text, { isSelected = isSelected, setSelected = setSelected, data = data }) end
-    function methods.CreateCheckbox(_, text, isSelected, setSelected, data) return addElement("checkbox", text, { isSelected = isSelected, setSelected = setSelected, data = data }) end
-    function methods.CreateTitle(_, text) return addElement("title", text) end
-    function methods.CreateDivider() return addElement("divider") end
-    function methods.CreateSpacer() return addElement("spacer") end
-    function methods.CreateTemplate() return addElement("spacer") end
+    function methods.CreateButton(_, text, callback, data)
+        return addElement("button", text, { callback = callback, data = data })
+    end
+    function methods.CreateRadio(_, text, isSelected, setSelected, data)
+        return addElement("radio", text, { isSelected = isSelected, setSelected = setSelected, data = data })
+    end
+    function methods.CreateCheckbox(_, text, isSelected, setSelected, data)
+        return addElement("checkbox", text, { isSelected = isSelected, setSelected = setSelected, data = data })
+    end
+    function methods.CreateTitle(_, text)
+        return addElement("title", text)
+    end
+    function methods.CreateDivider()
+        return addElement("divider")
+    end
+    function methods.CreateSpacer()
+        return addElement("spacer")
+    end
+    function methods.CreateTemplate()
+        return addElement("spacer")
+    end
     function methods.SetTag() end
     function methods.SetScrollMode() end
     function methods.SetMinimumWidth() end
@@ -269,14 +412,19 @@ local function closeMenu()
 end
 ui.closeMenu = closeMenu
 
-local function showMenu(owner, generator, onPicked)
+---isAtCursor: a context menu, at the cursor rather than under its owner (which its generator is still given)
+local function showMenu(owner, generator, onPicked, isAtCursor)
     closeMenu()
     local description = newDescription()
     sim.call(generator, owner, description)
     local menu = createFrame("Frame", nil, G.UIParent, "BackdropTemplate")
     menu:SetFrameStrata("FULLSCREEN_DIALOG")
-    menu:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 16,
-        insets = { left = 4, right = 4, top = 4, bottom = 4 } })
+    menu:SetBackdrop({
+        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 },
+    })
     menu:SetBackdropColor(0.06, 0.06, 0.06, 0.96)
     menu:EnableMouse(true)
     local y, width = -8, 120
@@ -295,9 +443,19 @@ local function showMenu(owner, generator, onPicked)
             button:SetHeight(18)
             button:SetPoint("TOPLEFT", menu, "TOPLEFT", 6, y)
             button:SetPoint("TOPRIGHT", menu, "TOPRIGHT", -6, y)
-            local label = button:CreateFontString(nil, "ARTWORK", element.kind == "title" and "GameFontNormalSmall" or "GameFontHighlightSmall")
+            local label = button:CreateFontString(
+                nil,
+                "ARTWORK",
+                element.kind == "title" and "GameFontNormalSmall" or "GameFontHighlightSmall"
+            )
             label:SetText(element.text)
-            label:SetPoint("LEFT", button, "LEFT", (element.kind == "radio" or element.kind == "checkbox") and 18 or 4, 0)
+            label:SetPoint(
+                "LEFT",
+                button,
+                "LEFT",
+                (element.kind == "radio" or element.kind == "checkbox") and 18 or 4,
+                0
+            )
             width = math.max(width, label:GetStringWidth() + 40)
             if element.kind == "radio" or element.kind == "checkbox" then
                 local mark = button:CreateTexture(nil, "ARTWORK")
@@ -305,7 +463,9 @@ local function showMenu(owner, generator, onPicked)
                 mark:SetPoint("LEFT", button, "LEFT", 2, 0)
                 local isChecked = element.isSelected and select(2, sim.call(element.isSelected, element.data))
                 if element.kind == "radio" then
-                    mark:SetAtlas(isChecked and "common-dropdown-icon-radialbutton-checked" or "common-dropdown-icon-radialbutton")
+                    mark:SetAtlas(
+                        isChecked and "common-dropdown-icon-radialbutton-checked" or "common-dropdown-icon-radialbutton"
+                    )
                 else
                     mark:SetAtlas(isChecked and "common-dropdown-icon-checkmark-yellow" or "common-dropdown-ticksquare")
                 end
@@ -313,21 +473,25 @@ local function showMenu(owner, generator, onPicked)
             if element.kind ~= "title" then
                 button:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
                 button:SetScript("OnClick", function()
-                    if element.enabled == false then return end
+                    if element.enabled == false then
+                        return
+                    end
                     if element.kind == "button" and element.callback then
                         sim.call(element.callback, element.data, { buttonName = "LeftButton" })
                     elseif element.setSelected then
                         sim.call(element.setSelected, element.data)
                     end
                     closeMenu()
-                    if onPicked then onPicked() end
+                    if onPicked then
+                        onPicked()
+                    end
                 end)
             end
             y = y - 18
         end
     end
     menu:SetSize(width, -y + 8)
-    if owner and owner ~= G.UIParent then
+    if owner and owner ~= G.UIParent and not isAtCursor then
         menu:SetPoint("TOPLEFT", owner, "BOTTOMLEFT", 0, -2)
     else
         local mouse = sim.mouse or { x = 200, y = 400 }
@@ -342,12 +506,18 @@ ui.showMenu = showMenu
 function sim.installDropdown(dropdown)
     local function refreshText()
         local generator = S[dropdown].menuGenerator
-        if not generator or S[dropdown].overrideText then return end
+        if not generator or S[dropdown].overrideText then
+            return
+        end
         local description = newDescription()
         sim.call(generator, dropdown, description)
         local function find(elements)
             for _, element in ipairs(elements) do
-                if element.kind == "radio" and element.isSelected and select(2, sim.call(element.isSelected, element.data)) then
+                if
+                    element.kind == "radio"
+                    and element.isSelected
+                    and select(2, sim.call(element.isSelected, element.data))
+                then
                     return element.text
                 end
             end
@@ -355,18 +525,39 @@ function sim.installDropdown(dropdown)
         local text = find(description.elements) or S[dropdown].defaultText
         dropdown.Text:SetText(text)
     end
-    dropdown.SetupMenu = function(self, generator) S[self].menuGenerator = generator; refreshText() end
-    dropdown.GenerateMenu = function() refreshText() end
-    dropdown.SetDefaultText = function(self, text) S[self].defaultText = text; refreshText() end
-    dropdown.OverrideText = function(self, text) S[self].overrideText = text; self.Text:SetText(text) end
+    dropdown.SetupMenu = function(self, generator)
+        S[self].menuGenerator = generator
+        refreshText()
+    end
+    dropdown.GenerateMenu = function()
+        refreshText()
+    end
+    dropdown.SetDefaultText = function(self, text)
+        S[self].defaultText = text
+        refreshText()
+    end
+    dropdown.OverrideText = function(self, text)
+        S[self].overrideText = text
+        self.Text:SetText(text)
+    end
     dropdown.SetSelectionText = function() end
     dropdown.SetSelectionTranslator = function() end
     dropdown.CloseMenu = closeMenu
-    dropdown.IsMenuOpen = function() return openMenu ~= nil end
-    dropdown.OpenMenu = function(self) showMenu(self, S[self].menuGenerator, refreshText) end
-    dropdown.SetEnabled = function(self, isEnabled) S[self].enabled = isEnabled and true or false end
+    dropdown.IsMenuOpen = function()
+        return openMenu ~= nil
+    end
+    dropdown.OpenMenu = function(self)
+        showMenu(self, S[self].menuGenerator, refreshText)
+    end
+    dropdown.SetEnabled = function(self, isEnabled)
+        S[self].enabled = isEnabled and true or false
+    end
     dropdown:SetScript("OnClick", function(self)
-        if openMenu then closeMenu() else self:OpenMenu() end
+        if openMenu then
+            closeMenu()
+        else
+            self:OpenMenu()
+        end
     end)
 end
 
@@ -384,7 +575,9 @@ function ui.install()
         sim.screenWidth, sim.screenHeight = math.floor(768 * physicalWidth / physicalHeight + 0.5), 768
         local scale = uiScale or (768 / physicalHeight)
         G.SetCVar("useUiScale", uiScale and "1" or "0")
-        if uiScale then G.SetCVar("uiScale", tostring(uiScale)) end
+        if uiScale then
+            G.SetCVar("uiScale", tostring(uiScale))
+        end
         S[root].scale = scale
         root:SetSize(sim.screenWidth / scale, sim.screenHeight / scale)
         sim.touch()
@@ -401,21 +594,37 @@ function ui.install()
     tooltipMethods.SetUnit = function(self, unit)
         self:ClearLines()
         local name = G.UnitName and G.UnitName(unit)
-        if not name then return end
+        if not name then
+            return
+        end
         S[self].unit = unit
         local isEnemy = G.UnitCanAttack and G.UnitCanAttack("player", unit)
         self:AddLine(name, isEnemy and 1 or 1, isEnemy and 0.1 or 1, isEnemy and 0.1 or 1)
         local level = G.UnitLevel and G.UnitLevel(unit)
-        if level and level > 0 then self:AddLine("Level " .. level, 1, 1, 1) end
-        local data = { type = G.Enum and G.Enum.TooltipDataType and G.Enum.TooltipDataType.Unit or 2, guid = G.UnitGUID and G.UnitGUID(unit), lines = {} }
-        for _, handler in ipairs(ui.tooltipPostCalls[data.type] or {}) do sim.call(handler, self, data) end
-        for _, handler in ipairs(ui.tooltipPostCalls.ALL or {}) do sim.call(handler, self, data) end
-        if S[self].scripts.OnTooltipSetUnit then sim.runScript(self, "OnTooltipSetUnit") end
+        if level and level > 0 then
+            self:AddLine("Level " .. level, 1, 1, 1)
+        end
+        local data = {
+            type = G.Enum and G.Enum.TooltipDataType and G.Enum.TooltipDataType.Unit or 2,
+            guid = G.UnitGUID and G.UnitGUID(unit),
+            lines = {},
+        }
+        for _, handler in ipairs(ui.tooltipPostCalls[data.type] or {}) do
+            sim.call(handler, self, data)
+        end
+        for _, handler in ipairs(ui.tooltipPostCalls.ALL or {}) do
+            sim.call(handler, self, data)
+        end
+        if S[self].scripts.OnTooltipSetUnit then
+            sim.runScript(self, "OnTooltipSetUnit")
+        end
         self:Show()
     end
     tooltipMethods.GetUnit = function(self)
         local unit = S[self].unit
-        if not unit then return nil end
+        if not unit then
+            return nil
+        end
         return G.UnitName and G.UnitName(unit), unit
     end
     local regionShow = W.types.Region.methods.Show
@@ -423,7 +632,9 @@ function ui.install()
     -- one hidden and shown again without SetOwner stays hidden
     local regionHide = W.types.Region.methods.Hide
     tooltipMethods.Show = function(self)
-        if not S[self].owner then return end
+        if not S[self].owner then
+            return
+        end
         ui.layoutTooltip(self)
         regionShow(self)
     end
@@ -432,7 +643,13 @@ function ui.install()
         regionHide(self)
     end
     W.defineType("GameTooltip", "Frame", tooltipMethods)
-    for _, name in ipairs({ "GameTooltip", "ItemRefTooltip", "ShoppingTooltip1", "ShoppingTooltip2", "EmbeddedItemTooltip" }) do
+    for _, name in ipairs({
+        "GameTooltip",
+        "ItemRefTooltip",
+        "ShoppingTooltip1",
+        "ShoppingTooltip2",
+        "EmbeddedItemTooltip",
+    }) do
         createTooltip(name)
     end
 
@@ -453,7 +670,11 @@ function ui.install()
     chatBox:SetFontObject("ChatFontNormal")
     chatBox:SetAutoFocus(false)
     if chatBox.SetBackdrop then
-        chatBox:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
+        chatBox:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            edgeSize = 1,
+        })
         chatBox:SetBackdropColor(0, 0, 0, 0.7)
         chatBox:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
     end
@@ -465,21 +686,31 @@ function ui.install()
         self:ClearFocus()
         self:Hide()
         if text:match("^%s*/") then
-            if sim.runSlashCommand then sim.runSlashCommand(text) end
+            if sim.runSlashCommand then
+                sim.runSlashCommand(text)
+            end
         elseif text:match("%S") then
             G.SendChatMessage(text, "SAY")
         end
     end)
-    chatBox:SetScript("OnEscapePressed", function(self) self:SetText(""); self:ClearFocus(); self:Hide() end)
+    chatBox:SetScript("OnEscapePressed", function(self)
+        self:SetText("")
+        self:ClearFocus()
+        self:Hide()
+    end)
     G.ChatFrame1EditBox = chatBox
     G.ChatFrame_OpenChat = function(text)
         chatBox:Show()
         chatBox:SetText(text or "")
         chatBox:SetFocus()
     end
-    G.ChatEdit_GetActiveWindow = function() return chatBox:IsShown() and chatBox or nil end
+    G.ChatEdit_GetActiveWindow = function()
+        return chatBox:IsShown() and chatBox or nil
+    end
     G.ChatEdit_InsertLink = function(text)
-        if not text or not chatBox:IsShown() then return false end
+        if not text or not chatBox:IsShown() then
+            return false
+        end
         chatBox:Insert(text)
         return true
     end
@@ -493,53 +724,111 @@ function ui.install()
     -- Panels and special frames
     G.UISpecialFrames = {}
     G.UIPanelWindows = {}
-    G.ShowUIPanel = function(frame) if frame then frame:Show() end end
-    G.HideUIPanel = function(frame) if frame then frame:Hide() end end
-    G.SetUIPanelAttribute = function(frame, key, value) frame:SetAttribute("UIPanelLayout-" .. key, value) end
-    G.GetUIPanel = function() return nil end
+    G.ShowUIPanel = function(frame)
+        if frame then
+            frame:Show()
+        end
+    end
+    G.HideUIPanel = function(frame)
+        if frame then
+            frame:Hide()
+        end
+    end
+    G.SetUIPanelAttribute = function(frame, key, value)
+        frame:SetAttribute("UIPanelLayout-" .. key, value)
+    end
+    G.GetUIPanel = function()
+        return nil
+    end
     G.UpdateUIPanelPositions = function() end
     G.CloseSpecialWindows = function()
         local isClosed = false
         for _, name in ipairs(G.UISpecialFrames) do
             local frame = G[name]
-            if frame and frame.IsShown and frame:IsShown() then frame:Hide(); isClosed = true end
+            if frame and frame.IsShown and frame:IsShown() then
+                frame:Hide()
+                isClosed = true
+            end
         end
         return isClosed
     end
     G.CloseAllWindows = G.CloseSpecialWindows
-    G.ToggleFrame = function(frame) if frame:IsShown() then frame:Hide() else frame:Show() end end
+    G.ToggleFrame = function(frame)
+        if frame:IsShown() then
+            frame:Hide()
+        else
+            frame:Show()
+        end
+    end
     G.PanelTemplates_TabResize = function(tab, padding, absoluteSize, minWidth, maxWidth)
         local text = tab.Text or (tab.GetFontString and tab:GetFontString())
         local width = absoluteSize or ((text and text:GetStringWidth() or 40) + 20 + (padding or 0))
-        if minWidth then width = math.max(width, minWidth) end
-        if maxWidth and maxWidth > 0 then width = math.min(width, maxWidth) end
+        if minWidth then
+            width = math.max(width, minWidth)
+        end
+        if maxWidth and maxWidth > 0 then
+            width = math.min(width, maxWidth)
+        end
         tab:SetWidth(width)
     end
     G.PanelTemplates_SelectTab = function(tab)
         local text = tab.Text or (tab.GetFontString and tab:GetFontString())
-        if text then text:SetTextColor(1, 1, 1) end
+        if text then
+            text:SetTextColor(1, 1, 1)
+        end
         S[tab].tabSelected = true
         tab:Disable()
     end
     G.PanelTemplates_DeselectTab = function(tab)
         local text = tab.Text or (tab.GetFontString and tab:GetFontString())
-        if text then text:SetTextColor(1, 0.82, 0) end
+        if text then
+            text:SetTextColor(1, 0.82, 0)
+        end
         S[tab].tabSelected = false
         tab:Enable()
     end
-    G.PanelTemplates_SetNumTabs = function(frame, count) frame.numTabs = count end
-    G.PanelTemplates_SetTab = function(frame, index) frame.selectedTab = index end
+    G.PanelTemplates_SetNumTabs = function(frame, count)
+        frame.numTabs = count
+    end
+    G.PanelTemplates_SetTab = function(frame, index)
+        frame.selectedTab = index
+    end
     G.PanelTemplates_UpdateTabs = function() end
     G.PanelTemplates_EnableTab = function(_, index) end
     G.PanelTemplates_DisableTab = function(_, index) end
-    G.ScrollUtil = { AddManagedScrollBarVisibilityBehavior = function() end, InitScrollBoxListWithScrollBar = function() end,
-        RegisterScrollBoxWithScrollBar = function() end, AddResizableChildrenBehavior = function() end }
-    G.NineSliceUtil = { ApplyLayout = function(frame) if frame.SetBackdrop then frame:SetBackdrop({ edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 16 }) end end,
-        ApplyLayoutByName = function(frame) G.NineSliceUtil.ApplyLayout(frame) end, GetLayout = function() return {} end }
-    G.NineSliceLayouts = setmetatable({}, { __index = function() return {} end })
+    G.ScrollUtil = {
+        AddManagedScrollBarVisibilityBehavior = function() end,
+        InitScrollBoxListWithScrollBar = function() end,
+        RegisterScrollBoxWithScrollBar = function() end,
+        AddResizableChildrenBehavior = function() end,
+    }
+    G.NineSliceUtil = {
+        ApplyLayout = function(frame)
+            if frame.SetBackdrop then
+                frame:SetBackdrop({ edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 16 })
+            end
+        end,
+        ApplyLayoutByName = function(frame)
+            G.NineSliceUtil.ApplyLayout(frame)
+        end,
+        GetLayout = function()
+            return {}
+        end,
+    }
+    G.NineSliceLayouts = setmetatable({}, {
+        __index = function()
+            return {}
+        end,
+    })
     G.BackdropTemplateMixin = {}
-    for key, method in pairs(require("templates").backdropMethods) do G.BackdropTemplateMixin[key] = method end
-    G.TOOLTIP_BACKDROP_STYLE_DEFAULT = { bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 16 }
+    for key, method in pairs(require("templates").backdropMethods) do
+        G.BackdropTemplateMixin[key] = method
+    end
+    G.TOOLTIP_BACKDROP_STYLE_DEFAULT = {
+        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        edgeSize = 16,
+    }
     G.BACKDROP_TOOLTIP_16_16_5555 = G.TOOLTIP_BACKDROP_STYLE_DEFAULT
 
     -- Popups
@@ -549,15 +838,28 @@ function ui.install()
         local dialog = G.StaticPopupDialogs[which]
         if not dialog then
             if which == "ABANDON_QUEST" then
-                dialog = { text = "Abandon \"%s\"?", button1 = "Yes", button2 = "No", OnAccept = function() G.C_QuestLog.AbandonQuest() end }
+                dialog = {
+                    text = 'Abandon "%s"?',
+                    button1 = "Yes",
+                    button2 = "No",
+                    OnAccept = function()
+                        G.C_QuestLog.AbandonQuest()
+                    end,
+                }
             else
                 return nil
             end
         end
         if not popup then
             popup = createFrame("Frame", "StaticPopup1", root, "BackdropTemplate")
-            popup:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-                tile = true, tileSize = 32, edgeSize = 32, insets = { left = 11, right = 12, top = 12, bottom = 11 } })
+            popup:SetBackdrop({
+                bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+                edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+                tile = true,
+                tileSize = 32,
+                edgeSize = 32,
+                insets = { left = 11, right = 12, top = 12, bottom = 11 },
+            })
             popup:SetFrameStrata("DIALOG")
             popup:SetSize(320, 110)
             popup:SetPoint("TOP", root, "TOP", 0, -135)
@@ -576,27 +878,65 @@ function ui.install()
         popup.button1:SetText(dialog.button1 or "Okay")
         popup.button2:SetText(dialog.button2 or "Cancel")
         popup.button2:SetShown(dialog.button2 ~= nil)
-        popup.button1:SetScript("OnClick", function() popup:Hide(); if dialog.OnAccept then sim.call(dialog.OnAccept, popup, data) end end)
-        popup.button2:SetScript("OnClick", function() popup:Hide(); if dialog.OnCancel then sim.call(dialog.OnCancel, popup, data) end end)
+        popup.button1:SetScript("OnClick", function()
+            popup:Hide()
+            if dialog.OnAccept then
+                sim.call(dialog.OnAccept, popup, data)
+            end
+        end)
+        popup.button2:SetScript("OnClick", function()
+            popup:Hide()
+            if dialog.OnCancel then
+                sim.call(dialog.OnCancel, popup, data)
+            end
+        end)
         popup:Show()
-        if dialog.OnShow then sim.call(dialog.OnShow, popup, data) end
+        if dialog.OnShow then
+            sim.call(dialog.OnShow, popup, data)
+        end
         return popup
     end
-    G.StaticPopup_Hide = function(which) if popup and (not which or popup.which == which) then popup:Hide() end end
-    G.StaticPopup_Visible = function(which) return popup and popup:IsShown() and popup.which == which and "StaticPopup1" or nil end
+    G.StaticPopup_Hide = function(which)
+        if popup and (not which or popup.which == which) then
+            popup:Hide()
+        end
+    end
+    G.StaticPopup_Visible = function(which)
+        return popup and popup:IsShown() and popup.which == which and "StaticPopup1" or nil
+    end
 
     -- Menus
     G.MenuUtil = {
-        CreateContextMenu = function(owner, generator) return showMenu(nil, generator) end,
+        CreateContextMenu = function(owner, generator)
+            return showMenu(owner, generator, nil, true)
+        end,
         CreateButtonMenu = function(owner, ...) end,
         CreateRadioMenu = function() end,
         CreateCheckboxMenu = function() end,
-        HideTooltip = function() G.GameTooltip:Hide() end,
-        ShowTooltip = function(owner, handler) G.GameTooltip:SetOwner(owner, "ANCHOR_RIGHT"); sim.call(handler, G.GameTooltip); G.GameTooltip:Show() end,
-        GetElementText = function(description) return description.text end,
+        HideTooltip = function()
+            G.GameTooltip:Hide()
+        end,
+        ShowTooltip = function(owner, handler)
+            G.GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+            sim.call(handler, G.GameTooltip)
+            G.GameTooltip:Show()
+        end,
+        GetElementText = function(description)
+            return description.text
+        end,
     }
-    G.Menu = { GetManager = function() return { HandleESC = function() local wasOpen = openMenu ~= nil; closeMenu(); return wasOpen end } end,
-        ModifyMenu = function() end }
+    G.Menu = {
+        GetManager = function()
+            return {
+                HandleESC = function()
+                    local wasOpen = openMenu ~= nil
+                    closeMenu()
+                    return wasOpen
+                end,
+            }
+        end,
+        ModifyMenu = function() end,
+    }
     G.MenuResponse = { Open = 1, Refresh = 2, Close = 3, CloseAll = 4 }
 
     -- Settings
@@ -611,20 +951,34 @@ function ui.install()
     G.Settings = {
         RegisterCanvasLayoutCategory = function(frame, name)
             local category = { ID = name, name = name, frame = frame }
-            function category:GetID() return self.ID end
-            function category:GetName() return self.name end
+            function category:GetID()
+                return self.ID
+            end
+            function category:GetName()
+                return self.name
+            end
             return category
         end,
         RegisterVerticalLayoutCategory = function(name)
             local category = { ID = name, name = name }
-            function category:GetID() return self.ID end
+            function category:GetID()
+                return self.ID
+            end
             return category
         end,
-        RegisterCanvasLayoutSubcategory = function(parent, frame, name) return G.Settings.RegisterCanvasLayoutCategory(frame, name) end,
-        RegisterAddOnCategory = function(category) categories[category.ID] = category end,
+        RegisterCanvasLayoutSubcategory = function(parent, frame, name)
+            return G.Settings.RegisterCanvasLayoutCategory(frame, name)
+        end,
+        RegisterAddOnCategory = function(category)
+            categories[category.ID] = category
+        end,
         OpenToCategory = function(id)
             local category = categories[id]
-            for _, other in pairs(categories) do if other.frame then other.frame:Hide() end end
+            for _, other in pairs(categories) do
+                if other.frame then
+                    other.frame:Hide()
+                end
+            end
             if category and category.frame then
                 category.frame:SetParent(settingsPanel)
                 category.frame:ClearAllPoints()
@@ -635,18 +989,33 @@ function ui.install()
             settingsPanel:Show()
             return true
         end,
-        RegisterAddOnSetting = function() return {} end,
+        RegisterAddOnSetting = function()
+            return {}
+        end,
         CreateCheckbox = function() end,
         CreateSlider = function() end,
         CreateDropdown = function() end,
-        CreateControlTextContainer = function() return { Add = function() end, GetData = function() return {} end } end,
-        CreateSliderOptions = function() return { SetLabelFormatter = function() end } end,
+        CreateControlTextContainer = function()
+            return {
+                Add = function() end,
+                GetData = function()
+                    return {}
+                end,
+            }
+        end,
+        CreateSliderOptions = function()
+            return { SetLabelFormatter = function() end }
+        end,
         SetValue = function() end,
         GetValue = function() end,
         VarType = { Boolean = "boolean", Number = "number", String = "string" },
     }
-    G.InterfaceOptions_AddCategory = function(frame) categories[frame.name or "AddOn"] = { ID = frame.name, frame = frame } end
-    G.InterfaceOptionsFrame_OpenToCategory = function(frame) G.Settings.OpenToCategory(type(frame) == "table" and frame.name or frame) end
+    G.InterfaceOptions_AddCategory = function(frame)
+        categories[frame.name or "AddOn"] = { ID = frame.name, frame = frame }
+    end
+    G.InterfaceOptionsFrame_OpenToCategory = function(frame)
+        G.Settings.OpenToCategory(type(frame) == "table" and frame.name or frame)
+    end
     G.AddonCompartmentFrame = { RegisterAddon = function() end }
 
     if sim.isWholeInterface then
@@ -662,12 +1031,20 @@ function ui.install()
         end
         function sim.placeMinimap(point, x, y)
             local cluster = G.MinimapCluster
-            if not cluster then return end
+            if not cluster then
+                return
+            end
             cluster:ClearAllPoints()
             cluster:SetPoint(point or "TOPRIGHT", root, point or "TOPRIGHT", x or 0, y or 0)
             -- (kept in the layout too, so the game's Edit Mode does not put it back when it applies the layouts)
             if sim.keepEditModePlace and G.Enum and G.Enum.EditModeSystem then
-                sim.keepEditModePlace(G.Enum.EditModeSystem.Minimap, point or "TOPRIGHT", point or "TOPRIGHT", x or 0, y or 0)
+                sim.keepEditModePlace(
+                    G.Enum.EditModeSystem.Minimap,
+                    point or "TOPRIGHT",
+                    point or "TOPRIGHT",
+                    x or 0,
+                    y or 0
+                )
             end
         end
     else
@@ -710,12 +1087,23 @@ function ui.install()
         -- The zone's name follows the player
         local function showZone()
             local map = game.maps[game.profile.uiMapId]
-            zoneText:SetText(game.profile.isInInstance and (game.profile.instanceName or "") or (map and map.name or ""))
+            zoneText:SetText(
+                game.profile.isInInstance and (game.profile.instanceName or "") or (map and map.name or "")
+            )
         end
         local zoneWatcher = createFrame("Frame", nil, cluster)
-        for _, event in ipairs({ "ZONE_CHANGED_NEW_AREA", "ZONE_CHANGED", "PLAYER_ENTERING_WORLD", "ZONE_CHANGED_INDOORS" }) do zoneWatcher:RegisterEvent(event) end
+        for _, event in ipairs({
+            "ZONE_CHANGED_NEW_AREA",
+            "ZONE_CHANGED",
+            "PLAYER_ENTERING_WORLD",
+            "ZONE_CHANGED_INDOORS",
+        }) do
+            zoneWatcher:RegisterEvent(event)
+        end
         zoneWatcher:SetScript("OnEvent", showZone)
-        G.GetMinimapZoneText = function() return zoneText:GetText() or "" end
+        G.GetMinimapZoneText = function()
+            return zoneText:GetText() or ""
+        end
         -- Edit Mode, as far as the minimap goes: it is outlined in the game's Edit Mode blue and can be dragged
         local editOverlay = createFrame("Frame", nil, cluster)
         editOverlay:SetAllPoints(cluster)
@@ -737,11 +1125,12 @@ function ui.install()
             cluster:ClearAllPoints()
             cluster:SetPoint(point or "TOPRIGHT", root, point or "TOPRIGHT", x or 0, y or 0)
         end
-
     end
     -- Frames addons hide or hook: stand-ins, unless the game's own interface is loaded, which makes the real ones
     -- (a stand-in left in their place lacks their methods: the panel manager calls ObjectiveTrackerFrame:UpdateHeight)
-    if sim.isWholeInterface then return end
+    if sim.isWholeInterface then
+        return
+    end
     G.ObjectiveTrackerFrame = createFrame("Frame", "ObjectiveTrackerFrame", root)
     G.ObjectiveTrackerFrame:SetSize(235, 400)
     G.ObjectiveTrackerFrame:SetPoint("TOPRIGHT", root, "TOPRIGHT", -80, -210)
@@ -769,7 +1158,9 @@ end
 ---The frame level the game's world map gives group member pins: its own level manager
 ---(MapCanvas_PinFrameLevelsManager) fed the list of pin levels from Blizzard_WorldMap.lua, as the game builds it.
 function ui.getGroupMemberPinLevel()
-    if ui.groupMemberPinLevel then return ui.groupMemberPinLevel end
+    if ui.groupMemberPinLevel then
+        return ui.groupMemberPinLevel
+    end
     local level = 2765 -- what the game's code gives with 20 quests in the log, should its files be missing
     local root = sim.config and sim.config.interfaceRoot
     local managerChunk = root and loadfile(root .. "/AddOns/Blizzard_MapCanvas/MapCanvas_PinFrameLevelsManager.lua")
@@ -784,10 +1175,15 @@ function ui.getGroupMemberPinLevel()
         for line in worldMapFile:lines() do
             local name, range = line:match('AddFrameLevel%("([%w_]+)"%s*,?%s*([^)]*)%)')
             if name then
-                if range == "" then range = nil
-                elseif range:find("GetMaxNumQuests") then range = maxQuests
-                elseif range:find("PIN_LEVEL_RANGE") then range = 7 -- the quest offer icons' levels (QuestOfferDataProvider)
-                else range = tonumber(range) end
+                if range == "" then
+                    range = nil
+                elseif range:find("GetMaxNumQuests") then
+                    range = maxQuests
+                elseif range:find("PIN_LEVEL_RANGE") then
+                    range = 7 -- the quest offer icons' levels (QuestOfferDataProvider)
+                else
+                    range = tonumber(range)
+                end
                 manager:AddFrameLevel(name, range)
             end
         end
@@ -814,7 +1210,9 @@ function ui.installTooltipData()
     processor.AddTooltipPostCall = function(tooltipType, handler)
         ui.tooltipPostCalls[tooltipType] = ui.tooltipPostCalls[tooltipType] or {}
         table.insert(ui.tooltipPostCalls[tooltipType], handler)
-        if register then return register(tooltipType, handler) end
+        if register then
+            return register(tooltipType, handler)
+        end
     end
 end
 
@@ -837,10 +1235,16 @@ function ui.installWorldMap(root)
         border = createFrame("Frame", nil, map, "PortraitFrameTemplateMinimizable")
         border:SetFrameStrata("HIGH")
         border:SetAllPoints(map)
-        border.onCloseCallback = function() G.HideUIPanel(map) end
+        border.onCloseCallback = function()
+            G.HideUIPanel(map)
+        end
         border:SetTitle(G.MAP_AND_QUEST_LOG)
-        if border.Bg then border.Bg:SetParent(map) end
-        if border.TopTileStreaks then border.TopTileStreaks:Hide() end
+        if border.Bg then
+            border.Bg:SetParent(map)
+        end
+        if border.TopTileStreaks then
+            border.TopTileStreaks:Hide()
+        end
         border:SetPortraitToAsset([[Interface\QuestFrame\UI-QuestLog-BookIcon]])
         if W.getTemplate("MaximizeMinimizeButtonFrameTemplate") then
             local sizeButtons = createFrame("Frame", nil, border, "MaximizeMinimizeButtonFrameTemplate")
@@ -851,13 +1255,19 @@ function ui.installWorldMap(root)
     else
         border = createFrame("Frame", nil, map, "BackdropTemplate")
         border:SetAllPoints(map)
-        border:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-            edgeSize = 24, insets = { left = 6, right = 6, top = 6, bottom = 6 } })
+        border:SetBackdrop({
+            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
+            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+            edgeSize = 24,
+            insets = { left = 6, right = 6, top = 6, bottom = 6 },
+        })
         title = border:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         title:SetPoint("TOP", border, "TOP", 0, -10)
         local close = createFrame("Button", nil, border, "UIPanelCloseButton")
         close:SetPoint("TOPRIGHT", border, "TOPRIGHT", -2, -2)
-        close:SetScript("OnClick", function() G.HideUIPanel(map) end)
+        close:SetScript("OnClick", function()
+            G.HideUIPanel(map)
+        end)
         border.CloseButton = close
     end
     map.BorderFrame = border
@@ -882,9 +1292,13 @@ function ui.installWorldMap(root)
     S[canvas].isMapCanvas = true
     local tiles = {}
     local function drawTiles(uiMapId)
-        for _, tile in ipairs(tiles) do tile:Hide() end
+        for _, tile in ipairs(tiles) do
+            tile:Hide()
+        end
         local art = ui.mapArt and ui.mapArt[uiMapId]
-        if not art then return end
+        if not art then
+            return
+        end
         for index, tile in ipairs(art.tiles) do
             local texture = tiles[index]
             if not texture then
@@ -894,7 +1308,13 @@ function ui.installWorldMap(root)
             texture:SetTexture(tile.fileId)
             texture:SetSize(art.tileWidth * art.scale, art.tileHeight * art.scale)
             texture:ClearAllPoints()
-            texture:SetPoint("TOPLEFT", canvas, "TOPLEFT", tile.column * art.tileWidth * art.scale, -tile.row * art.tileHeight * art.scale)
+            texture:SetPoint(
+                "TOPLEFT",
+                canvas,
+                "TOPLEFT",
+                tile.column * art.tileWidth * art.scale,
+                -tile.row * art.tileHeight * art.scale
+            )
             texture:Show()
         end
     end
@@ -905,40 +1325,70 @@ function ui.installWorldMap(root)
     map.SidePanelToggle.Refresh = function() end
     local mapId = game.profile.uiMapId
     local providers, pins = {}, {}
-    map.GetMapID = function() return mapId end
+    map.GetMapID = function()
+        return mapId
+    end
     map.SetMapID = function(self, newMapId)
-        if not newMapId or newMapId == mapId and S[self].mapSet then return end
+        if not newMapId or newMapId == mapId and S[self].mapSet then
+            return
+        end
         mapId, S[self].mapSet = newMapId, true
         local info = G.C_Map.GetMapInfo(mapId)
         -- The game's map keeps its title ("Map & Quest Log"); the stand-in frame names the map
-        if not hasGameChrome then title:SetText(info and info.name or ("Map " .. tostring(mapId))) end
+        if not hasGameChrome then
+            title:SetText(info and info.name or ("Map " .. tostring(mapId)))
+        end
         drawTiles(mapId)
         -- A new map starts zoomed out, its zoom levels its own
-        if container.resetView then container.resetView() end
+        if container.resetView then
+            container.resetView()
+        end
         self:OnMapChanged()
     end
     map.OnMapChanged = function(self)
-        if self.NavBar and self.NavBar.Refresh then sim.call(self.NavBar.Refresh, self.NavBar) end
-        for provider in pairs(providers) do
-            if provider.OnMapChanged then sim.call(provider.OnMapChanged, provider) end
-            if provider.RefreshAllData then sim.call(provider.RefreshAllData, provider, true) end
+        if self.NavBar and self.NavBar.Refresh then
+            sim.call(self.NavBar.Refresh, self.NavBar)
         end
-        if self.callbacks then for _, callback in ipairs(self.callbacks) do sim.call(callback, self, mapId) end end
+        for provider in pairs(providers) do
+            if provider.OnMapChanged then
+                sim.call(provider.OnMapChanged, provider)
+            end
+            if provider.RefreshAllData then
+                sim.call(provider.RefreshAllData, provider, true)
+            end
+        end
+        if self.callbacks then
+            for _, callback in ipairs(self.callbacks) do
+                sim.call(callback, self, mapId)
+            end
+        end
     end
     map.RegisterCallback = function(self, event, callback, owner)
         self.callbacks = self.callbacks or {}
-        table.insert(self.callbacks, function(...) callback(owner, ...) end)
+        table.insert(self.callbacks, function(...)
+            callback(owner, ...)
+        end)
     end
     map.UnregisterCallback = function() end
     -- The map's pin level manager, as the game's world map builds it (see ui.getGroupMemberPinLevel)
     map.GetPinFrameLevelsManager = function()
         ui.getGroupMemberPinLevel()
-        return ui.pinFrameLevelsManager or { GetFrameLevelStart = function(_, levelType)
-            return levelType == "PIN_FRAME_LEVEL_GROUP_MEMBER" and ui.groupMemberPinLevel or 2000
-        end, GetValidFrameLevel = function() return 2000 end }
+        return ui.pinFrameLevelsManager
+            or {
+                GetFrameLevelStart = function(_, levelType)
+                    return levelType == "PIN_FRAME_LEVEL_GROUP_MEMBER" and ui.groupMemberPinLevel or 2000
+                end,
+                GetValidFrameLevel = function()
+                    return 2000
+                end,
+            }
     end
-    map.GetCanvas = function() return canvas end
-    map.GetCanvasContainer = function() return container end
+    map.GetCanvas = function()
+        return canvas
+    end
+    map.GetCanvasContainer = function()
+        return container
+    end
 
     -- Zoom and pan, as the game's MapCanvasScrollControllerMixin: zoom levels from the map's art layer (from
     -- minScale to maxScale, with its additional steps) times the scale that fits the art in the window; the
@@ -953,7 +1403,9 @@ function ui.installWorldMap(root)
     local function createZoomLevels()
         local layer = G.C_Map.GetMapArtLayers(mapId)[1]
         local width, height = container:GetWidth(), container:GetHeight()
-        if not width or width <= 0 then width, height = 697, 465 end
+        if not width or width <= 0 then
+            width, height = 697, 465
+        end
         local baseScale = math.min(width / layer.layerWidth, height / layer.layerHeight)
         zoomLevels = {}
         local currentScale = 0
@@ -972,24 +1424,33 @@ function ui.installWorldMap(root)
         local viewWidth, viewHeight = (container:GetWidth() or 697) / scale, (container:GetHeight() or 465) / scale
         local canvasWidth, canvasHeight = canvas:GetWidth(), canvas:GetHeight()
         local function clampScroll(center, view, size)
-            if view >= size then return (size - view) / 2 end
+            if view >= size then
+                return (size - view) / 2
+            end
             return math.max(0, math.min(size - view, center * size - view / 2))
         end
-        local horizontal, vertical = clampScroll(scrollX, viewWidth, canvasWidth), clampScroll(scrollY, viewHeight, canvasHeight)
+        local horizontal, vertical =
+            clampScroll(scrollX, viewWidth, canvasWidth), clampScroll(scrollY, viewHeight, canvasHeight)
         scrollX, scrollY = (horizontal + viewWidth / 2) / canvasWidth, (vertical + viewHeight / 2) / canvasHeight
         S[container].horizontalScroll, S[container].verticalScroll = horizontal, vertical
-        sim.touch()
+        sim.touch(container)
     end
     local function setZoom(index, centerX, centerY)
         index = math.max(1, math.min(#zoomLevels, index))
         local isChanged = index ~= zoomIndex
         zoomIndex = index
-        if centerX then scrollX, scrollY = centerX, centerY end
-        if zoomIndex == 1 then scrollX, scrollY = 0.5, 0.5 end
+        if centerX then
+            scrollX, scrollY = centerX, centerY
+        end
+        if zoomIndex == 1 then
+            scrollX, scrollY = 0.5, 0.5
+        end
         if isZoomInstant or not currentScale then
             currentScale = nil
             applyView()
-            if isChanged then sim.call(map.OnCanvasScaleChanged, map) end
+            if isChanged then
+                sim.call(map.OnCanvasScaleChanged, map)
+            end
         else
             applyView() -- (the scale stays; the glide moves it, in OnUpdate)
         end
@@ -997,30 +1458,48 @@ function ui.installWorldMap(root)
     -- Each step of the scale: to the data providers, then every pin, as MapCanvasMixin:CallMethodOnPinsAndDataProviders
     map.OnCanvasScaleChanged = function(self)
         for provider in pairs(providers) do
-            if provider.OnCanvasScaleChanged then sim.call(provider.OnCanvasScaleChanged, provider) end
+            if provider.OnCanvasScaleChanged then
+                sim.call(provider.OnCanvasScaleChanged, provider)
+            end
         end
         for pin in pairs(pins) do
-            if pin.OnCanvasScaleChanged then sim.call(pin.OnCanvasScaleChanged, pin) end
+            if pin.OnCanvasScaleChanged then
+                sim.call(pin.OnCanvasScaleChanged, pin)
+            end
         end
     end
-    map.GetCanvasScale = function() return canvas:GetScale() end
+    map.GetCanvasScale = function()
+        return canvas:GetScale()
+    end
     map.GetCanvasZoomPercent = function()
-        if #zoomLevels <= 1 then return 0 end
+        if #zoomLevels <= 1 then
+            return 0
+        end
         return (canvas:GetScale() - zoomLevels[1]) / (zoomLevels[#zoomLevels] - zoomLevels[1])
     end
-    map.IsZoomedIn = function() return zoomIndex > 1 end
-    map.IsZoomingIn = function() return currentScale ~= nil and currentScale < (zoomLevels[zoomIndex] or currentScale) end
-    map.IsZoomingOut = function() return currentScale ~= nil and currentScale > (zoomLevels[zoomIndex] or currentScale) end
+    map.IsZoomedIn = function()
+        return zoomIndex > 1
+    end
+    map.IsZoomingIn = function()
+        return currentScale ~= nil and currentScale < (zoomLevels[zoomIndex] or currentScale)
+    end
+    map.IsZoomingOut = function()
+        return currentScale ~= nil and currentScale > (zoomLevels[zoomIndex] or currentScale)
+    end
     map.SetShouldZoomInstantly = function(_, isInstant)
         isZoomInstant = isInstant and true or false
         currentScale = (not isZoomInstant) and canvas:GetScale() or nil
     end
-    map.ShouldZoomInstantly = function() return isZoomInstant end
+    map.ShouldZoomInstantly = function()
+        return isZoomInstant
+    end
     container.SetShouldZoomInstantly = map.SetShouldZoomInstantly
     container.ShouldZoomInstantly = map.ShouldZoomInstantly
     local function glide()
         local target = zoomLevels[zoomIndex]
-        if isZoomInstant or not currentScale or not target or currentScale == target then return end
+        if isZoomInstant or not currentScale or not target or currentScale == target then
+            return
+        end
         if math.abs(currentScale - target) < 0.0001 then
             currentScale = target
         else
@@ -1031,27 +1510,46 @@ function ui.installWorldMap(root)
     end
     map.GetViewRect = function()
         local scale = canvas:GetScale()
-        local width, height = (container:GetWidth() or 697) / scale / canvas:GetWidth(), (container:GetHeight() or 465) / scale / canvas:GetHeight()
+        local width, height =
+            (container:GetWidth() or 697) / scale / canvas:GetWidth(),
+            (container:GetHeight() or 465) / scale / canvas:GetHeight()
         return scrollX - width / 2, scrollY - height / 2, width, height
     end
-    map.PanTo = function(self, x, y) scrollX, scrollY = x, y; applyView() end
-    map.PanAndZoomTo = function(self, x, y) setZoom(#zoomLevels, x, y) end
+    map.PanTo = function(self, x, y)
+        scrollX, scrollY = x, y
+        applyView()
+    end
+    map.PanAndZoomTo = function(self, x, y)
+        setZoom(#zoomLevels, x, y)
+    end
     -- (at once whatever the map's zoom, as the game's ResetZoom: InstantPanAndZoom)
     map.ResetZoom = function()
         currentScale = nil
         setZoom(1)
-        if not isZoomInstant then currentScale = canvas:GetScale() end
+        if not isZoomInstant then
+            currentScale = canvas:GetScale()
+        end
     end
-    container.ZoomIn = function() setZoom(zoomIndex + 1) end
-    container.ZoomOut = function() setZoom(zoomIndex - 1) end
+    container.ZoomIn = function()
+        setZoom(zoomIndex + 1)
+    end
+    container.ZoomOut = function()
+        setZoom(zoomIndex - 1)
+    end
     container.GetCanvasScale = map.GetCanvasScale
     container.IsZoomedIn = map.IsZoomedIn
-    container.GetZoomLevelCount = function() return #zoomLevels end
-    container.GetCurrentZoomIndex = function() return zoomIndex end
+    container.GetZoomLevelCount = function()
+        return #zoomLevels
+    end
+    container.GetCurrentZoomIndex = function()
+        return zoomIndex
+    end
     container.resetView = function()
         createZoomLevels()
         zoomIndex, scrollX, scrollY = 1, 0.5, 0.5
-        if currentScale then currentScale = zoomLevels[1] end
+        if currentScale then
+            currentScale = zoomLevels[1]
+        end
         applyView()
     end
     container:SetScript("OnMouseWheel", function(_, delta)
@@ -1059,7 +1557,9 @@ function ui.installWorldMap(root)
         local left, bottom, width, height = canvas:GetRect()
         local centerX, centerY
         if delta > 0 and mouse and left then
-            centerX, centerY = (mouse.x / canvas:GetEffectiveScale() - left) / width, 1 - (mouse.y / canvas:GetEffectiveScale() - bottom) / height
+            centerX, centerY =
+                (mouse.x / canvas:GetEffectiveScale() - left) / width,
+                1 - (mouse.y / canvas:GetEffectiveScale() - bottom) / height
         end
         setZoom(zoomIndex + (delta > 0 and 1 or -1), centerX, centerY)
     end)
@@ -1067,35 +1567,65 @@ function ui.installWorldMap(root)
     -- Dragged with the left button: the map follows the cursor
     local dragFrom
     container:SetScript("OnMouseDown", function(_, button)
-        if button == "LeftButton" and sim.mouse then dragFrom = { x = sim.mouse.x, y = sim.mouse.y, scrollX = scrollX, scrollY = scrollY } end
+        if button == "LeftButton" and sim.mouse then
+            dragFrom = { x = sim.mouse.x, y = sim.mouse.y, scrollX = scrollX, scrollY = scrollY }
+        end
     end)
     local function followDrag()
-        if not dragFrom or not sim.mouse then return end
+        if not dragFrom or not sim.mouse then
+            return
+        end
         local scale = canvas:GetEffectiveScale()
         scrollX = dragFrom.scrollX - (sim.mouse.x - dragFrom.x) / scale / canvas:GetWidth()
         scrollY = dragFrom.scrollY + (sim.mouse.y - dragFrom.y) / scale / canvas:GetHeight()
         applyView()
     end
     -- Let go: the map ends where the cursor is, however fast it moved
-    container:SetScript("OnMouseUp", function() followDrag(); dragFrom = nil end)
+    container:SetScript("OnMouseUp", function()
+        followDrag()
+        dragFrom = nil
+    end)
     container:SetScript("OnUpdate", function()
         glide()
-        if dragFrom and not sim.mouseDown then dragFrom = nil end
+        if dragFrom and not sim.mouseDown then
+            dragFrom = nil
+        end
         followDrag()
     end)
-    map.NavigateToParentMap = function(self) local info = G.C_Map.GetMapInfo(mapId); if info and info.parentMapID > 0 then self:SetMapID(info.parentMapID) end end
+    map.NavigateToParentMap = function(self)
+        local info = G.C_Map.GetMapInfo(mapId)
+        if info and info.parentMapID > 0 then
+            self:SetMapID(info.parentMapID)
+        end
+    end
     map.NavigateToCursor = function() end
     map.GetNormalizedCursorPosition = function()
         local mouse = sim.mouse
         local left, bottom, width, height = canvas:GetRect()
-        if not mouse or not left then return 0.5, 0.5 end
+        if not mouse or not left then
+            return 0.5, 0.5
+        end
         -- The cursor is in screen units, the canvas' rect in its own (scaled by the map and its zoom)
         local scale = canvas:GetEffectiveScale()
         return (mouse.x - left * scale) / (width * scale), 1 - (mouse.y - bottom * scale) / (height * scale)
     end
-    map.AddDataProvider = function(self, provider) providers[provider] = true; provider.owningMap = self; if provider.OnAdded then sim.call(provider.OnAdded, provider, self) end end
-    map.RemoveDataProvider = function(self, provider) providers[provider] = nil end
-    map.RefreshAllDataProviders = function() for provider in pairs(providers) do if provider.RefreshAllData then sim.call(provider.RefreshAllData, provider) end end end
+    map.AddDataProvider = function(self, provider)
+        providers[provider] = true
+        provider.owningMap = self
+        if provider.OnAdded then
+            sim.call(provider.OnAdded, provider, self)
+        end
+    end
+    map.RemoveDataProvider = function(self, provider)
+        providers[provider] = nil
+    end
+    map.RefreshAllDataProviders = function()
+        for provider in pairs(providers) do
+            if provider.RefreshAllData then
+                sim.call(provider.RefreshAllData, provider)
+            end
+        end
+    end
     map.AcquirePin = function(self, template, ...)
         local pin = createFrame("Button", nil, canvas)
         S[pin].pinTemplate = template
@@ -1106,44 +1636,107 @@ function ui.installWorldMap(root)
         pin.SetPosition = function(pinSelf, x, y)
             local scale = pinSelf:GetScale()
             pinSelf:ClearAllPoints()
-            pinSelf:SetPoint("CENTER", canvas, "TOPLEFT", x * canvas:GetWidth() / scale, -y * canvas:GetHeight() / scale)
+            pinSelf:SetPoint(
+                "CENTER",
+                canvas,
+                "TOPLEFT",
+                x * canvas:GetWidth() / scale,
+                -y * canvas:GetHeight() / scale
+            )
         end
-        pin.GetMap = function() return self end
-        if pin.OnAcquired then sim.call(pin.OnAcquired, pin, ...) end
+        pin.GetMap = function()
+            return self
+        end
+        if pin.OnAcquired then
+            sim.call(pin.OnAcquired, pin, ...)
+        end
         return pin
     end
-    map.RemoveAllPinsByTemplate = function(_, template) for pin, pinTemplate in pairs(pins) do if pinTemplate == template then pin:Hide(); pins[pin] = nil end end end
-    map.RemovePin = function(_, pin) pin:Hide(); pins[pin] = nil end
+    map.RemoveAllPinsByTemplate = function(_, template)
+        for pin, pinTemplate in pairs(pins) do
+            if pinTemplate == template then
+                pin:Hide()
+                pins[pin] = nil
+            end
+        end
+    end
+    map.RemovePin = function(_, pin)
+        pin:Hide()
+        pins[pin] = nil
+    end
     map.EnumeratePinsByTemplate = function(_, template)
         local list = {}
-        for pin, pinTemplate in pairs(pins) do if pinTemplate == template then list[#list + 1] = pin end end
+        for pin, pinTemplate in pairs(pins) do
+            if pinTemplate == template then
+                list[#list + 1] = pin
+            end
+        end
         local index = 0
-        return function() index = index + 1; return list[index] end
+        return function()
+            index = index + 1
+            return list[index]
+        end
     end
     map.EnumerateAllPins = function()
         local list = {}
-        for pin in pairs(pins) do list[#list + 1] = pin end
+        for pin in pairs(pins) do
+            list[#list + 1] = pin
+        end
         local index = 0
-        return function() index = index + 1; return list[index] end
+        return function()
+            index = index + 1
+            return list[index]
+        end
     end
-    map.GetNumActivePinsByTemplate = function(_, template) local count = 0; for _, pinTemplate in pairs(pins) do if pinTemplate == template then count = count + 1 end end; return count end
-    map.SetDisplayState = function(self, displayState) S[self].displayState = displayState end
+    map.GetNumActivePinsByTemplate = function(_, template)
+        local count = 0
+        for _, pinTemplate in pairs(pins) do
+            if pinTemplate == template then
+                count = count + 1
+            end
+        end
+        return count
+    end
+    map.SetDisplayState = function(self, displayState)
+        S[self].displayState = displayState
+    end
     -- What the game's map calls as it pans, zooms and resizes; addons hook these
-    for _, name in ipairs({ "OnCanvasScaleChanged", "OnCanvasPanChanged", "OnCanvasSizeChanged", "OnFrameSizeChanged",
-        "RefreshAll", "RefreshOverlayFrames", "OnMapInsetSizeChanged", "OnMapInsetMouseEnter", "OnMapInsetMouseLeave",
-        "OnUIClose", "SetHighlightedPin", "TriggerEvent" }) do
+    for _, name in ipairs({
+        "OnCanvasScaleChanged",
+        "OnCanvasPanChanged",
+        "OnCanvasSizeChanged",
+        "OnFrameSizeChanged",
+        "RefreshAll",
+        "RefreshOverlayFrames",
+        "OnMapInsetSizeChanged",
+        "OnMapInsetMouseEnter",
+        "OnMapInsetMouseLeave",
+        "OnUIClose",
+        "SetHighlightedPin",
+        "TriggerEvent",
+    }) do
         -- (not over the ones made above: OnCanvasScaleChanged was, and the providers never heard the zoom)
-        if map[name] == nil then map[name] = function() end end
+        if map[name] == nil then
+            map[name] = function() end
+        end
     end
-    map.IsMaximized = function() return false end
+    map.IsMaximized = function()
+        return false
+    end
     map.HandleUserActionMinimizeSelf = function() end
     map.HandleUserActionMaximizeSelf = function() end
-    map.SetQuestLogPanelShown = function(_, isShown) map.QuestLog:SetShown(isShown) end
+    map.SetQuestLogPanelShown = function(_, isShown)
+        map.QuestLog:SetShown(isShown)
+    end
     map.UpdateSpacerFrameAnchoring = function() end
     map.SynchronizeDisplayState = function() end
-    map.IsSidePanelShown = function() return map.QuestLog:IsShown() end
+    map.IsSidePanelShown = function()
+        return map.QuestLog:IsShown()
+    end
     map:HookScript("OnShow", function(self)
-        if not S[self].mapSet then self:SetMapID(game.profile.uiMapId) end
+        if not S[self].mapSet then
+            self:SetMapID(game.profile.uiMapId)
+        end
     end)
     -- The breadcrumb bar (World > continent > zone), the game's own when its templates are loaded
     if W.getTemplate("WorldMapNavBarTemplate") then
@@ -1165,7 +1758,10 @@ function ui.installWorldMap(root)
     local memberBlips = {}
     local function placeOnCanvas(texture, unit, size)
         local position = G.C_Map.GetPlayerMapPosition(mapId, unit)
-        if not position then texture:Hide(); return false end
+        if not position then
+            texture:Hide()
+            return false
+        end
         local x, y = position:GetXY()
         local scale = canvas:GetScale()
         texture:SetSize(size / scale, size / scale)
@@ -1175,7 +1771,9 @@ function ui.installWorldMap(root)
         return true
     end
     groupLayer:SetScript("OnUpdate", function()
-        if not map:IsVisible() then return end
+        if not map:IsVisible() then
+            return
+        end
         local party = require("party")
         for index, member in ipairs(party.members) do
             local blip = memberBlips[index]
@@ -1187,26 +1785,75 @@ function ui.installWorldMap(root)
             end
             local color = G.RAID_CLASS_COLORS[member.classFile]
             blip:SetVertexColor(color and color.r or 1, color and color.g or 1, color and color.b or 1)
-            if not member.isOnline or not placeOnCanvas(blip, "party" .. index, 11) then blip:Hide() end
+            if not member.isOnline or not placeOnCanvas(blip, "party" .. index, 11) then
+                blip:Hide()
+            end
         end
-        for index = #party.members + 1, #memberBlips do memberBlips[index]:Hide() end
-        if placeOnCanvas(playerArrow, "player", 27) then playerArrow:SetRotation(game.profile.facing or 0) end
+        for index = #party.members + 1, #memberBlips do
+            memberBlips[index]:Hide()
+        end
+        if placeOnCanvas(playerArrow, "player", 27) then
+            playerArrow:SetRotation(game.profile.facing or 0)
+        end
     end)
 
     -- Placed by the game's panel manager, registered as Blizzard_WorldMap.lua registers it
     if G.RegisterUIPanel then
-        G.RegisterUIPanel(map, { area = "left", pushable = 0, xoffset = 0, yoffset = 0, whileDead = 1, minYOffset = 0, maximizePoint = "TOP", allowOtherPanels = 1 })
+        G.RegisterUIPanel(map, {
+            area = "left",
+            pushable = 0,
+            xoffset = 0,
+            yoffset = 0,
+            whileDead = 1,
+            minYOffset = 0,
+            maximizePoint = "TOP",
+            allowOtherPanels = 1,
+        })
     end
     G.ToggleWorldMap = function()
-        if map:IsShown() then G.HideUIPanel(map) else G.ShowUIPanel(map); map:SetMapID(game.profile.uiMapId) end
+        if map:IsShown() then
+            G.HideUIPanel(map)
+        else
+            G.ShowUIPanel(map)
+            map:SetMapID(game.profile.uiMapId)
+        end
     end
-    G.ToggleQuestLog = function() G.ToggleWorldMap() end
-    G.OpenWorldMap = function(uiMapId) G.ShowUIPanel(map); if uiMapId then map:SetMapID(uiMapId) end end
-    G.MapCanvasPinMixin = { SetPosition = function(self, x, y) self:ClearAllPoints(); self:SetPoint("CENTER", canvas, "TOPLEFT", x * canvas:GetWidth(), -y * canvas:GetHeight()) end,
-        OnLoad = function() end, OnAcquired = function() end, OnReleased = function() end, SetScalingLimits = function() end, UseFrameLevelType = function() end,
-        GetMap = function(self) return self.owningMap end }
-    G.MapCanvasDataProviderMixin = { GetMap = function(self) return self.owningMap end, OnAdded = function(self, owningMap) self.owningMap = owningMap end,
-        RemoveAllData = function() end, RefreshAllData = function() end, OnMapChanged = function(self) self:RefreshAllData() end }
+    G.ToggleQuestLog = function()
+        G.ToggleWorldMap()
+    end
+    G.OpenWorldMap = function(uiMapId)
+        G.ShowUIPanel(map)
+        if uiMapId then
+            map:SetMapID(uiMapId)
+        end
+    end
+    G.MapCanvasPinMixin = {
+        SetPosition = function(self, x, y)
+            self:ClearAllPoints()
+            self:SetPoint("CENTER", canvas, "TOPLEFT", x * canvas:GetWidth(), -y * canvas:GetHeight())
+        end,
+        OnLoad = function() end,
+        OnAcquired = function() end,
+        OnReleased = function() end,
+        SetScalingLimits = function() end,
+        UseFrameLevelType = function() end,
+        GetMap = function(self)
+            return self.owningMap
+        end,
+    }
+    G.MapCanvasDataProviderMixin = {
+        GetMap = function(self)
+            return self.owningMap
+        end,
+        OnAdded = function(self, owningMap)
+            self.owningMap = owningMap
+        end,
+        RemoveAllData = function() end,
+        RefreshAllData = function() end,
+        OnMapChanged = function(self)
+            self:RefreshAllData()
+        end,
+    }
 end
 
 ---Map art per map: the tiles of its first art layer (UiMapXMapArt, UiMapArt, UiMapArtTile), fitted to the canvas.
@@ -1214,13 +1861,19 @@ function ui.loadMapArt(readTable)
     local artByMap, tilesByArt, styles = {}, {}, {}
     for _, row in ipairs(readTable("UiMapXMapArt") or {}) do
         local mapId, artId = tonumber(row.UiMapID), tonumber(row.UiMapArtID)
-        if mapId and artId and not artByMap[mapId] then artByMap[mapId] = artId end
+        if mapId and artId and not artByMap[mapId] then
+            artByMap[mapId] = artId
+        end
     end
     for _, row in ipairs(readTable("UiMapArtTile") or {}) do
         local artId = tonumber(row.UiMapArtID)
         if artId and (tonumber(row.LayerIndex) or 0) == 0 then
             tilesByArt[artId] = tilesByArt[artId] or {}
-            table.insert(tilesByArt[artId], { row = tonumber(row.RowIndex) or 0, column = tonumber(row.ColIndex) or 0, fileId = tonumber(row.FileDataID) })
+            table.insert(tilesByArt[artId], {
+                row = tonumber(row.RowIndex) or 0,
+                column = tonumber(row.ColIndex) or 0,
+                fileId = tonumber(row.FileDataID),
+            })
         end
     end
     for _, row in ipairs(readTable("UiMapArt") or {}) do
@@ -1230,19 +1883,38 @@ function ui.loadMapArt(readTable)
     for _, row in ipairs(readTable("UiMapArtStyleLayer") or {}) do
         local style = tonumber(row.UiMapArtStyleID)
         if style and (tonumber(row.LayerIndex) or 0) == 0 then
-            styleLayers[style] = { tileWidth = tonumber(row.TileWidth) or 256, tileHeight = tonumber(row.TileHeight) or 256,
-                width = tonumber(row.LayerWidth) or 1002, height = tonumber(row.LayerHeight) or 668,
-                minScale = tonumber(row.MinScale) or 1, maxScale = tonumber(row.MaxScale) or 1, additionalZoomSteps = tonumber(row.AdditionalZoomSteps) or 0 }
+            styleLayers[style] = {
+                tileWidth = tonumber(row.TileWidth) or 256,
+                tileHeight = tonumber(row.TileHeight) or 256,
+                width = tonumber(row.LayerWidth) or 1002,
+                height = tonumber(row.LayerHeight) or 668,
+                minScale = tonumber(row.MinScale) or 1,
+                maxScale = tonumber(row.MaxScale) or 1,
+                additionalZoomSteps = tonumber(row.AdditionalZoomSteps) or 0,
+            }
         end
     end
     ui.mapArt = {}
     for mapId, artId in pairs(artByMap) do
         local tiles = tilesByArt[artId]
         if tiles then
-            local layer = styleLayers[styles[artId] or 0] or { tileWidth = 256, tileHeight = 256, width = 1002, height = 668 }
-            ui.mapArt[mapId] = { tiles = tiles, tileWidth = layer.tileWidth, tileHeight = layer.tileHeight, scale = 1002 / layer.width,
-                layer = { layerWidth = layer.width, layerHeight = layer.height, tileWidth = layer.tileWidth, tileHeight = layer.tileHeight,
-                    minScale = layer.minScale or 1, maxScale = layer.maxScale or 1, additionalZoomSteps = layer.additionalZoomSteps or 0 } }
+            local layer = styleLayers[styles[artId] or 0]
+                or { tileWidth = 256, tileHeight = 256, width = 1002, height = 668 }
+            ui.mapArt[mapId] = {
+                tiles = tiles,
+                tileWidth = layer.tileWidth,
+                tileHeight = layer.tileHeight,
+                scale = 1002 / layer.width,
+                layer = {
+                    layerWidth = layer.width,
+                    layerHeight = layer.height,
+                    tileWidth = layer.tileWidth,
+                    tileHeight = layer.tileHeight,
+                    minScale = layer.minScale or 1,
+                    maxScale = layer.maxScale or 1,
+                    additionalZoomSteps = layer.additionalZoomSteps or 0,
+                },
+            }
         end
     end
 end

@@ -71,13 +71,29 @@ export const attachInput = (screen: HTMLElement, options: InputOptions): (() => 
     void sendMove();
     options.onMove(point, event);
   };
+  // The buttons pressed on the screen: their release and the moves between are followed off it too (a drag let go
+  // outside the screen still ends in the game)
+  const buttonsDown = new Set<number>();
   const onMouseDown = (event: MouseEvent): void => {
     screen.focus({ preventScroll: true });
     event.preventDefault();
+    if (buttonsDown.size === 0) {
+      window.addEventListener("mousemove", onWindowMouseMove);
+      window.addEventListener("mouseup", onMouseUp);
+    }
+    buttonsDown.add(event.button);
     const point = toScreen(event.clientX, event.clientY);
     void sendThenPoll({ type: "down", ...point, button: BUTTONS[event.button], mods: modifiers(event) });
   };
+  const onWindowMouseMove = (event: MouseEvent): void => {
+    if (event.target !== screen && !screen.contains(event.target as Node)) onMouseMove(event);
+  };
   const onMouseUp = (event: MouseEvent): void => {
+    if (!buttonsDown.delete(event.button)) return;
+    if (buttonsDown.size === 0) {
+      window.removeEventListener("mousemove", onWindowMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    }
     // A move still waiting goes first: the release must come where the cursor ended (a drag across the map pans it)
     if (pendingMove) {
       const move = pendingMove;
@@ -91,6 +107,7 @@ export const attachInput = (screen: HTMLElement, options: InputOptions): (() => 
   const onWheel = (event: WheelEvent): void => {
     if (options.isMagnified() && event.altKey) return; // Option/Alt + wheel moves the magnified view instead
     event.preventDefault();
+    if (event.deltaY === 0) return; // (a sideways swipe: the game's wheel is up and down only)
     const point = toScreen(event.clientX, event.clientY);
     void sendThenPoll({ type: "wheel", ...point, delta: event.deltaY < 0 ? 1 : -1, mods: modifiers(event) });
   };
@@ -111,7 +128,6 @@ export const attachInput = (screen: HTMLElement, options: InputOptions): (() => 
 
   screen.addEventListener("mousemove", onMouseMove);
   screen.addEventListener("mousedown", onMouseDown);
-  screen.addEventListener("mouseup", onMouseUp);
   screen.addEventListener("contextmenu", onContextMenu);
   screen.addEventListener("wheel", onWheel, { passive: false });
   screen.addEventListener("keydown", onKeyDown);
@@ -120,7 +136,8 @@ export const attachInput = (screen: HTMLElement, options: InputOptions): (() => 
   return () => {
     screen.removeEventListener("mousemove", onMouseMove);
     screen.removeEventListener("mousedown", onMouseDown);
-    screen.removeEventListener("mouseup", onMouseUp);
+    window.removeEventListener("mousemove", onWindowMouseMove);
+    window.removeEventListener("mouseup", onMouseUp);
     screen.removeEventListener("contextmenu", onContextMenu);
     screen.removeEventListener("wheel", onWheel);
     screen.removeEventListener("keydown", onKeyDown);

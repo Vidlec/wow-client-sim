@@ -8,7 +8,7 @@
 //   POST /api/setup/downloadInterface  {} -> SetupState: starts fetching the flavour's interface source; its progress
 //                                      is in GET /api/setup's interfaceDownload (poll it about once a second)
 //   POST /api/setup/checkFolder        FolderCheckRequest -> FolderCheck: what a typed path holds, before saving it
-//   POST /api/setup/pickFolder         FolderPickRequest -> FolderPick: the system's own folder dialog (this computer)
+//   POST /api/setup/listFolder         FolderListRequest -> FolderListing: a folder's folders, for the page's browser
 //
 // While the setup is not done the server still serves the page and these routes; no simulator runs, and
 // GET /api/state answers SetupNeeded instead of the game's state.
@@ -17,7 +17,7 @@ export const SETUP_ROUTES = {
   setup: "/api/setup",
   downloadInterface: "/api/setup/downloadInterface",
   checkFolder: "/api/setup/checkFolder",
-  pickFolder: "/api/setup/pickFolder",
+  listFolder: "/api/setup/listFolder",
 } as const;
 
 /** One WoW client the simulator can be (WoW: Forever today; Classic and Retail later) */
@@ -41,6 +41,9 @@ export type Settings = {
   flavour: string;
   /** The game's Interface/AddOns folder with the addons to run */
   addonsRoot: string;
+  /** More folders with addons, beside the AddOns folder: each holds addon folders (or is one); an addon in one of
+   * these wins over one of the same name in the AddOns folder, a later folder over an earlier */
+  addonFolders: string[];
   /** The game's interface source (wow-ui-source's Interface folder); "" for the one downloaded by the setup */
   interfaceRoot: string;
   /** The addons switched on, by folder name (the Addons tab changes these) */
@@ -129,9 +132,8 @@ export type SetupState = {
   simulator: SimulatorStatus;
   /** Where the app keeps things, to show the user */
   paths: { settingsFile: string; dataDir: string; cacheDir: string; savedDir: string; downloadedInterface: string };
-  /** The app's version, and whether it runs from a source checkout (bun run start) or as the bundled executable */
+  /** The app's version */
   version: string;
-  isSourceCheckout: boolean;
 };
 
 export type SetupAnswer = SetupState & {
@@ -158,10 +160,31 @@ export type FolderCheck = {
   suggestion?: string;
 };
 
-export type FolderPickRequest = { kind: FolderKind; startPath?: string };
+/** A folder to look into (none: where browsing starts: the setting's own, else the host's folders, else the home) */
+export type FolderListRequest = { kind: FolderKind; path?: string };
 
-/** path null: the dialog was closed without choosing (or there is no dialog on this system: error says so) */
-export type FolderPick = { path: string | null; error?: string };
+export type FolderEntry = {
+  name: string;
+  path: string;
+  isFolder: boolean;
+  /** What it seems to be, for the kind looked for ("an AddOns folder", "the game") */
+  hint?: string;
+};
+
+/** A folder as the server sees it (in a container: the host's folders mounted into it, ADDONSIM_BROWSE) */
+export type FolderListing = {
+  path: string;
+  /** The folder above, or null at a root */
+  parent: string | null;
+  /** Where browsing may start over: drives, the home, the host's folders */
+  roots: { name: string; path: string }[];
+  /** Its folders (and, for LuaJIT, its files that may be it), by name */
+  entries: FolderEntry[];
+  /** What this folder is, for the kind looked for (null for LuaJIT, which is a file) */
+  check: FolderCheck | null;
+  /** The folder could not be read (it was not there: path is where it went instead) */
+  error?: string;
+};
 
 /** GET /api/state while the setup is not done (error says so too, for a page that knows only the game's state) */
 export type SetupNeeded = { setupNeeded: true; problems: SetupProblem[]; error: string };

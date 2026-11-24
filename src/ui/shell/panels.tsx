@@ -153,7 +153,7 @@ export const PANELS: readonly PanelInfo[] = [
   {
     id: "view",
     title: "View",
-    description: "Screen, UI scale, zoom, renderer and input",
+    description: "Screen, UI scale, zoom and input",
     icon: <Sliders />,
     group: "page",
     Component: ViewPanel,

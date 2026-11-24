@@ -2,7 +2,7 @@
 // port and token. Read by every command that talks to it, so kept free of the simulator's own code.
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { CACHE_DIR, IS_STANDALONE, SOURCE_ROOT } from "../server/paths.ts";
+import { CACHE_DIR, SOURCE_ROOT } from "../server/paths.ts";
 import type { DaemonStatus } from "./types.ts";
 
 export type DaemonFile = {
@@ -16,9 +16,8 @@ export type DaemonFile = {
 };
 
 /** The newest write time of the simulator's TypeScript (not the page's): a daemon older than it runs old code, and
- * is started afresh (from the sources only: an executable's code never changes under it). Some 5 ms */
+ * is started afresh. Some 5 ms */
 export const codeStamp = (): number => {
-  if (IS_STANDALONE) return 0;
   let newest = 0;
   const walk = (folder: string): void => {
     for (const entry of readdirSync(folder, { withFileTypes: true })) {

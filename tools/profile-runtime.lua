@@ -10,10 +10,14 @@ local scene = require("scene")
 local clock = sim.clock
 
 -- Settle, as the page would have after loading
-for _ = 1, 40 do sim.tick(0.05) end
+for _ = 1, 40 do
+    sim.tick(0.05)
+end
 if isMapOpen then
     sim.call(sim.G.ToggleWorldMap)
-    for _ = 1, 40 do sim.tick(0.05) end
+    for _ = 1, 40 do
+        sim.tick(0.05)
+    end
 end
 
 local profile = require("jit.profile")
@@ -30,20 +34,36 @@ local function measure(label, count, body)
     selfCounts, fileCounts, total = {}, {}, 0
     profile.start("li1", sample)
     local started = clock()
-    for _ = 1, count do body() end
+    for _ = 1, count do
+        body()
+    end
     local ms = (clock() - started) / count
     profile.stop()
     print(("== %s: %.2f ms each"):format(label, ms))
     for _, counts in ipairs({ fileCounts, selfCounts }) do
         local rows = {}
-        for name, value in pairs(counts) do rows[#rows + 1] = { name, value } end
-        table.sort(rows, function(a, b) return a[2] > b[2] end)
-        for index = 1, math.min(10, #rows) do print(("%6.1f%%  %s"):format(rows[index][2] * 100 / math.max(total, 1), rows[index][1])) end
+        for name, value in pairs(counts) do
+            rows[#rows + 1] = { name, value }
+        end
+        table.sort(rows, function(a, b)
+            return a[2] > b[2]
+        end)
+        for index = 1, math.min(10, #rows) do
+            print(("%6.1f%%  %s"):format(rows[index][2] * 100 / math.max(total, 1), rows[index][1]))
+        end
         print("   --")
     end
 end
 
-measure("tick (50 ms of game time)", 200, function() sim.tick(0.05) end)
-measure("scene export (changed)", 60, function() sim.touch(); scene.export() end)
-measure("scene request as the page asks it", 60, function() sim.touch(); handlers.scene({ op = "scene" }) end)
+measure("tick (50 ms of game time)", 200, function()
+    sim.tick(0.05)
+end)
+measure("scene export (changed)", 60, function()
+    sim.touch()
+    scene.export()
+end)
+measure("scene request as the page asks it", 60, function()
+    sim.touch()
+    handlers.scene({ op = "scene" })
+end)
 os.exit(0)

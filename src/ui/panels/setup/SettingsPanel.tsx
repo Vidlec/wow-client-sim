@@ -250,7 +250,6 @@ const AppOptions = ({ setup }: { setup: SetupState }) => {
               {paths.cacheDir}
             </span>,
           ],
-          ["Runs from", setup.isSourceCheckout ? "a source checkout" : "the app"],
         ]}
       />
       <Button size="sm" variant="danger-soft" onPress={() => setResetting(true)}>

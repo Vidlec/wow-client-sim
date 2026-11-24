@@ -49,3 +49,11 @@ export const getAtlas = (name: string): AtlasInfo | null | undefined => {
   }
   return cached instanceof Promise ? undefined : cached;
 };
+
+/** No atlas asked for is still on its way */
+export const areAtlasesSettled = (): boolean => {
+  for (const entry of cache.values()) {
+    if (entry instanceof Promise) return false;
+  }
+  return true;
+};

@@ -1,0 +1,16 @@
+# What the image never takes from the checkout: what is installed or built in it, and what is the machine's own
+.git
+node_modules
+native/target
+cache
+saved
+interface
+dist
+config.json
+api-report.txt
+tools/bin
+scenarios/.last-run
+scenarios/.coverage
+scenarios/.timings.json
+.impeccable
+.claude

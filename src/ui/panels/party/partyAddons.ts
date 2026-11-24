@@ -1,5 +1,5 @@
-// The addons a party member may run, as the simulator lists them (/api/state partyAddons): Questie's, built in, and
-// whatever the served project's plugins register (lua/plugins.lua). Nothing is known of them here but what they say.
+// The addons a party member may run, as the simulator lists them (/api/state partyAddons): whatever the served
+// project's plugins register (lua/plugins.lua). Nothing is known of them here but what they say.
 import { useSimState } from "../../sim/hooks.ts";
 import type { PartyAddon } from "../../sim/types.ts";
 

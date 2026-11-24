@@ -4,7 +4,7 @@
 import { existsSync } from "node:fs";
 import { findFlavour } from "./flavours/index.ts";
 import { downloadedInterfaceRoot } from "./paths.ts";
-import { loadSettings, type StoredSettings, writeSettings } from "./settings.ts";
+import { loadSettings, type StoredSettings } from "./settings.ts";
 
 export { CACHE_DIR, ROOT, SAVED_DIR, SCENARIOS_DIR } from "./paths.ts";
 export { readJsonFile } from "./settings.ts";
@@ -13,6 +13,8 @@ export type Config = {
   /** The flavour's id ("forever") */
   flavour: string;
   addonsRoot: string;
+  /** More folders with addons (the settings' addonFolders) */
+  addonFolders?: string[];
   addons: string[];
   /** The wago.tools build of the game's art and tables ("1.60.1.71037") */
   build: string;
@@ -43,7 +45,14 @@ export const resolveInterfaceRoot = (settings: StoredSettings): string | undefin
 /** The settings as the simulator reads them: the flavour's client first, the settings (and their extra keys) over it */
 export const resolveConfig = (settings: StoredSettings): Config => {
   const flavour = findFlavour(settings.flavour);
-  const { luajitPath: _luajit, openBrowser: _open, interfaceRoot: _interface, blizzardAddons, ...rest } = settings;
+  const {
+    luajitPath: _luajit,
+    openBrowser: _open,
+    interfaceRoot: _interface,
+    projectAddons: _projects,
+    blizzardAddons,
+    ...rest
+  } = settings;
   const build = settings.build || flavour.wagoBuild;
   // A build set by hand names its own version and number (1.60.1.70959: "1.60.1", "70959")
   const isOwnBuild = build === flavour.wagoBuild;
@@ -79,11 +88,4 @@ export const applySettings = (config: Config, settings: StoredSettings): Config 
   const next = resolveConfig(settings);
   for (const key of Object.keys(config)) if (!(key in next)) delete config[key];
   return Object.assign(config, next);
-};
-
-/** The addons switched on now kept in the settings; every other setting as it is on disk */
-export const saveAddons = (config: Config): void => {
-  const settings = loadSettings();
-  settings.addons = config.addons;
-  writeSettings(settings);
 };

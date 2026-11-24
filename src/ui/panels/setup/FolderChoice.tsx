@@ -1,12 +1,13 @@
 // A folder a setting points at (your AddOns folder, the interface source, LuaJIT): the ones found on this computer to
-// pick from, or a path typed (checked before it is saved, with a better one nearby offered) or chosen in the system's
-// own folder dialog
+// pick from, or a path typed (checked before it is saved, with a better one nearby offered) or chosen in the page's
+// folder browser
 import { CircleCheckFill, Folder, FolderOpen, MagnifierPlus } from "@gravity-ui/icons";
 import { Button, Description, FieldError, Input, Label, Spinner, TextField, toast } from "@heroui/react";
 import { useEffect, useState } from "react";
 import type { FolderKind } from "../../../shared/setup.ts";
+import { FolderBrowser } from "../../components/FolderBrowser.tsx";
 import type { DetectedFolder } from "../../sim/setup.ts";
-import { checkFolder, pickFolder } from "../../sim/setup.ts";
+import { checkFolder } from "../../sim/setup.ts";
 
 type Props = {
   kind: FolderKind;
@@ -25,6 +26,7 @@ export const FolderChoice = ({ kind, label, value, detected, placeholder, onSave
   const [typed, setTyped] = useState(value);
   const [check, setCheck] = useState<{ isValid: boolean; message: string; suggestion?: string } | null>(null);
   const [isBusy, setBusy] = useState(false);
+  const [isBrowsing, setBrowsing] = useState(false);
   useEffect(() => setTyped(value), [value]);
 
   const save = async (path: string): Promise<void> => {
@@ -50,20 +52,20 @@ export const FolderChoice = ({ kind, label, value, detected, placeholder, onSave
       setBusy(false);
     }
   };
-  const browse = async (): Promise<void> => {
-    const picked = await pickFolder(kind, typed || undefined).catch((error: unknown) => ({
-      path: null,
-      error: String(error),
-    }));
-    if (picked.error) toast.warning("No folder dialog here", { description: picked.error });
-    if (picked.path) {
-      setTyped(picked.path);
-      await runCheck(picked.path);
-    }
-  };
 
   return (
     <div className="flex flex-col gap-3">
+      <FolderBrowser
+        kind={kind}
+        isOpen={isBrowsing}
+        title={label}
+        startPath={typed || value || undefined}
+        onClose={() => setBrowsing(false)}
+        onChoose={(path) => {
+          setTyped(path);
+          void runCheck(path);
+        }}
+      />
       {detected.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-muted">Found on this computer</span>
@@ -111,7 +113,7 @@ export const FolderChoice = ({ kind, label, value, detected, placeholder, onSave
             {isBusy ? <Spinner size="sm" /> : <MagnifierPlus />}
             Check
           </Button>
-          <Button variant="tertiary" isDisabled={isBusy} onPress={() => void browse()}>
+          <Button variant="tertiary" isDisabled={isBusy} onPress={() => setBrowsing(true)}>
             <FolderOpen />
             Browse…
           </Button>

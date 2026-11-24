@@ -8,19 +8,15 @@
 // Needs the sim's server running and serving the same project (it draws the scenes from that project's scenarios
 // folder): on port 8765, or ADDONSIM_PORT. The picture is twice the screen's size, as on a sharp display; behind the
 // windows goes the zone's loading screen, as the world would be.
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, mkdirSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { Project } from "../project/config.ts";
 import { expandHome } from "../project/load.ts";
 import { selectProject, takeProjectFlag } from "../project/select.ts";
+import { findChrome, takePicture } from "../sdk/chrome.ts";
 import { playScenarios } from "./suite.ts";
 
-const CHROME = [
-  "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-  "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
-  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-].find((path) => existsSync(path));
+const CHROME = findChrome();
 const BACKDROP = "Interface\\Glues\\LoadingScreens\\LoadScreenKalimdor";
 const PORT = Number(process.env.ADDONSIM_PORT) || 8765;
 const SCALE = 2;
@@ -34,47 +30,6 @@ const say = (text: string): void => {
 const playScenario = async (project: Project, name: string): Promise<string> => {
   const result = await playScenarios({ project, scenarios: [join(project.scenariosDir, "shots", `${name}.lua`)] });
   return (result.runs[0]?.output ?? "").replace(/\r\n/g, "\n");
-};
-
-/** Chrome draws one scene into target; false when it took too long and was ended */
-const drawScene = async (
-  chrome: string,
-  target: string,
-  width: number,
-  height: number,
-  query: string,
-): Promise<boolean> => {
-  // A fresh profile for each picture: a Chrome left behind by an earlier run holds a shared one, and the next waits
-  // on it for good
-  const profile = mkdtempSync(join(tmpdir(), "addonsim-shot-"));
-  try {
-    const child = Bun.spawn(
-      [
-        chrome,
-        "--headless=new",
-        "--disable-gpu",
-        "--hide-scrollbars",
-        "--no-first-run",
-        `--user-data-dir=${profile}`,
-        `--window-size=${width},${height}`,
-        `--force-device-scale-factor=${SCALE}`,
-        "--virtual-time-budget=15000",
-        `--screenshot=${target}`,
-        `http://localhost:${PORT}/?${query}`,
-      ],
-      { stdin: "ignore", stdout: "ignore", stderr: "ignore", windowsHide: true },
-    );
-    let isOverTime = false;
-    const timer = setTimeout(() => {
-      isOverTime = true;
-      child.kill();
-    }, CHROME_TIMEOUT_MS);
-    await child.exited;
-    clearTimeout(timer);
-    return !isOverTime;
-  } finally {
-    rmSync(profile, { recursive: true, force: true, maxRetries: 3 });
-  }
 };
 
 const main = async (): Promise<number> => {
@@ -124,8 +79,20 @@ const main = async (): Promise<number> => {
         crop: box,
       }).toString();
       const target = join(output, `screenshot-${shot}.png`);
-      if (!(await drawScene(CHROME, target, width, height, query))) say(`${shot}: Chrome took too long, skipped`);
-      say(existsSync(target) ? `${shot}: ${target} (${width * SCALE}x${height * SCALE})` : `${shot}: no picture`);
+      const outcome = await takePicture({
+        chrome: CHROME,
+        url: `http://localhost:${PORT}/?${query}`,
+        width,
+        height,
+        scale: SCALE,
+        target,
+        timeoutMs: CHROME_TIMEOUT_MS,
+      });
+      say(
+        outcome.isSaved
+          ? `${shot}: ${target} (${width * SCALE}x${height * SCALE})`
+          : `${shot}: no picture (${outcome.title})`,
+      );
     }
   }
   return 0;

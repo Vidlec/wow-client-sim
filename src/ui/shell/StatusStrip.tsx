@@ -67,7 +67,7 @@ const PerfReadout = () => {
   const worst = simulator?.worst;
   const game = perf ? `${perf.fps} fps · ${perf.frameMs} ms` : "";
   const page = draw
-    ? `drawn ${Math.round(draw.drawsPerSecond)}/s · ${draw.renderer === "gl" ? "GPU" : "DOM"} ${draw.drawMs.toFixed(1)} ms`
+    ? `drawn ${Math.round(draw.drawsPerSecond)}/s · ${draw.hasGpu ? "WebGPU" : "no WebGPU"} ${draw.drawMs.toFixed(1)} ms`
     : "";
   return (
     <Popover>
@@ -93,9 +93,7 @@ const PerfReadout = () => {
               ["Page draws", draw ? `${Math.round(draw.drawsPerSecond)} a second` : "…"],
               [
                 "Renderer",
-                draw
-                  ? `${draw.renderer === "gl" ? "GPU (WebGL2)" : "page elements"}, ${draw.drawMs.toFixed(1)} ms a draw`
-                  : "…",
+                draw ? `${draw.hasGpu ? "WebGPU" : "none (no WebGPU)"}, ${draw.drawMs.toFixed(1)} ms a draw` : "…",
               ],
             ]}
           />

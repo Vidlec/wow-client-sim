@@ -23,21 +23,14 @@ import { applySettings, type Config, resolveConfig, resolveInterfaceRoot } from 
 import { describeFlavour, FLAVOURS, findFlavour } from "./flavours/index.ts";
 import { LuaHost } from "./luaHost.ts";
 import { describeLuajit, findLuajit, forgetLuajitVersions, readLuajitVersion } from "./luajit.ts";
-import {
-  APP_VERSION,
-  CACHE_DIR,
-  downloadedInterfaceRoot,
-  IS_SOURCE_CHECKOUT,
-  ROOT,
-  SAVED_DIR,
-  SETTINGS_PATH,
-} from "./paths.ts";
+import { APP_VERSION, CACHE_DIR, downloadedInterfaceRoot, ROOT, SAVED_DIR, SETTINGS_PATH } from "./paths.ts";
 import { SceneStream } from "./sceneStream.ts";
 import {
   checkChange,
   defaultSettings,
   loadSettings,
   publicSettings,
+  readProjectAddons,
   type StoredSettings,
   writeSettings,
 } from "./settings.ts";
@@ -67,11 +60,14 @@ export class App {
   readonly stream = new SceneStream();
   readonly interfaceDownload = new InterfaceDownloader();
   #detected: Detected | null = null;
-  /** The project's addons switched on now (its config's load at first) */
+  /** The project's addons switched on now: the Addons tab's choice for it, kept in the settings by the project's folder
+   * (projectAddons), else its config's load */
   #projectAddons: string[] | null = null;
 
   constructor(readonly project: Project | null = null) {
     this.settings = loadSettings();
+    const kept = project ? readProjectAddons(this.settings)[project.root] : undefined;
+    if (kept) this.#projectAddons = kept;
     this.config = resolveConfig(this.settings);
     this.#applyProject();
     this.host = new LuaHost(this.config, this.#makeArt());
@@ -188,7 +184,13 @@ export class App {
   keepAddons(addons: string[]): void {
     this.config.addons = addons;
     if (this.project) {
+      // (kept between runs, for this project alone: a server restarted brings back what was switched on)
       this.#projectAddons = addons;
+      this.settings = {
+        ...this.settings,
+        projectAddons: { ...readProjectAddons(this.settings), [this.project.root]: addons },
+      };
+      writeSettings(this.settings);
       return;
     }
     this.settings = { ...this.settings, addons };
@@ -252,7 +254,6 @@ export class App {
         downloadedInterface: downloadedInterfaceRoot(this.settings.flavour),
       },
       version: APP_VERSION,
-      isSourceCheckout: IS_SOURCE_CHECKOUT,
     };
     if (this.interfaceDownload.status.state !== "idle") state.interfaceDownload = { ...this.interfaceDownload.status };
     return state;

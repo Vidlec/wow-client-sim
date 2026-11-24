@@ -3,6 +3,7 @@
 // addon file it names mapped to the file on disk, so a reader opens the line at once.
 import { join, relative } from "node:path";
 import type { Project } from "../project/config.ts";
+import { type AddonRoots, findAddonDir } from "../server/addonSources.ts";
 import type { Failure, LuaError } from "./types.ts";
 
 /** Forward slashes, relative to the project when inside it */
@@ -12,13 +13,14 @@ export const showPath = (project: Project, path: string): string => {
   return inside && !inside.startsWith("..") && !/^[a-z]:/i.test(inside) ? inside : normal;
 };
 
-/** A game path (Interface/AddOns/<Addon>/x.lua) as the file on disk: the project's addon, else the AddOns folder's */
-export const addonFile = (project: Project, addonsRoot: string, path: string): string => {
+/** A game path (Interface/AddOns/<Addon>/x.lua) as the file on disk: wherever the addon is (the project's own, a
+ * further folder, the AddOns folder; addonSources.ts) */
+export const addonFile = (project: Project, roots: AddonRoots | string, path: string): string => {
   const match = /^Interface[/\\]AddOns[/\\]([^/\\]+)[/\\](.*)$/i.exec(path);
   if (!match) return path;
   const [, name = "", rest = ""] = match;
-  const own = project.addons.find((addon) => addon.name.toLowerCase() === name.toLowerCase());
-  return join(own ? own.dir : join(addonsRoot, name), rest);
+  const addonRoots = typeof roots === "string" ? { addonsRoot: roots } : roots;
+  return join(findAddonDir(addonRoots, project.addons, name), rest);
 };
 
 /** A failed check: "text\n  at file:line" */
@@ -49,14 +51,14 @@ const trimTraceback = (stack: string): string =>
     .join("\n");
 
 /** A Lua error an addon raised: where its message says it happened, as a file on disk */
-export const luaFailure = (project: Project, addonsRoot: string, error: LuaError): Failure => {
+export const luaFailure = (project: Project, roots: AddonRoots | string, error: LuaError): Failure => {
   const at = /^(?:\[string "[^"]*"\]|([^:\n]+?\.(?:lua|xml))):(\d+): /.exec(error.message);
   const failure: Failure = {
     kind: "lua",
     message: error.count > 1 ? `${error.message} (${error.count}x)` : error.message,
   };
   if (at?.[1]) {
-    failure.file = showPath(project, addonFile(project, addonsRoot, at[1]));
+    failure.file = showPath(project, addonFile(project, roots, at[1]));
     failure.line = Number(at[2]);
   }
   const traceback = trimTraceback(error.stack);

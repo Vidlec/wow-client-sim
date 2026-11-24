@@ -10,7 +10,8 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import type { Project } from "../project/config.ts";
-import { findAddonDir, selectProject, takeProjectFlag } from "../project/select.ts";
+import { selectProject, takeProjectFlag } from "../project/select.ts";
+import { findAddonDir } from "../server/addonSources.ts";
 import { loadConfig } from "../server/config.ts";
 import { pyFixed } from "./format.ts";
 
@@ -131,7 +132,7 @@ export const writeReport = (addonFolder: string, paths: CoveragePaths): void => 
 
 /** The project's coverage addon's folder, or null when it names none */
 export const coverageFolder = (project: Project): string | null =>
-  project.coverageAddon ? findAddonDir(project, loadConfig().addonsRoot, project.coverageAddon) : null;
+  project.coverageAddon ? findAddonDir(loadConfig(), project.addons, project.coverageAddon) : null;
 
 if (import.meta.main) {
   const project = await selectProject(takeProjectFlag(process.argv.slice(2)).projectDir);

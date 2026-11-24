@@ -43,8 +43,6 @@ export type ProjectConfig = {
   coverage?: string;
   /** The character scenarios log in as unless they say otherwise (--@login) */
   login?: LoginSpec;
-  /** The game flavour ("forever" by default: the settings') */
-  flavour?: string;
   /** Where `bun run shots` puts the gallery's pictures (its scenarios are <scenarios>/shots/*.lua); "~" is the home */
   gallery?: string;
 };
@@ -70,7 +68,6 @@ export type Project = {
   luaPath: string[];
   coverageAddon: string | null;
   login: LoginSpec | null;
-  flavour: string | null;
   /** The gallery's output folder (absolute, "~" expanded), or null when the project names none */
   galleryDir: string | null;
 };

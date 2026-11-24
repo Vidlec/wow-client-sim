@@ -1,0 +1,8 @@
+# StyLua (the Lua formatter): its defaults, with 4-space indents as .editorconfig sets for Lua.
+# Run: bun run format:lua (check only: bun run lint:lua)
+column_width = 120
+line_endings = "Unix"
+indent_type = "Spaces"
+indent_width = 4
+quote_style = "AutoPreferDouble"
+call_parentheses = "Always"

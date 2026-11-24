@@ -1,21 +1,29 @@
 -- JSON for the pipe between the Lua host and the server: compact encode, strict-enough decode.
 local json = {}
 
-local escapes = { ['"'] = '\\"', ["\\"] = "\\\\", ["\b"] = "\\b", ["\f"] = "\\f", ["\n"] = "\\n", ["\r"] = "\\r", ["\t"] = "\\t" }
+local escapes =
+    { ['"'] = '\\"', ["\\"] = "\\\\", ["\b"] = "\\b", ["\f"] = "\\f", ["\n"] = "\\n", ["\r"] = "\\r", ["\t"] = "\\t" }
 
 -- Bytes that are not valid UTF-8 (binary addon messages, such as Questie's) become \u00XX, so the line stays
 -- valid JSON whatever an addon sends
 local function makeValidUtf8(text)
-    if not text:find("[\128-\255]") then return text end
+    if not text:find("[\128-\255]") then
+        return text
+    end
     local parts, position, length = {}, 1, #text
     while position <= length do
         local byte = text:byte(position)
-        local size = byte < 0x80 and 1 or (byte >= 0xC2 and byte <= 0xDF) and 2 or (byte >= 0xE0 and byte <= 0xEF) and 3
-            or (byte >= 0xF0 and byte <= 0xF4) and 4 or 0
+        local size = byte < 0x80 and 1
+            or (byte >= 0xC2 and byte <= 0xDF) and 2
+            or (byte >= 0xE0 and byte <= 0xEF) and 3
+            or (byte >= 0xF0 and byte <= 0xF4) and 4
+            or 0
         local isValid = size > 0 and position + size - 1 <= length
         for offset = 1, size - 1 do
             local continuation = isValid and text:byte(position + offset)
-            if not continuation or continuation < 0x80 or continuation > 0xBF then isValid = false end
+            if not continuation or continuation < 0x80 or continuation > 0xBF then
+                isValid = false
+            end
         end
         if isValid then
             parts[#parts + 1] = text:sub(position, position + size - 1)
@@ -33,7 +41,9 @@ local escapedKeys = {} -- the keys of the scene's items ("x", "atlas"...): the s
 
 local function escapeString(text)
     -- Most text needs nothing escaped: quoted as it is
-    if not find(text, '[%c"\\\128-\255]') then return '"' .. text .. '"' end
+    if not find(text, '[%c"\\\128-\255]') then
+        return '"' .. text .. '"'
+    end
     -- Quotes, backslashes and control characters first; then the invalid bytes, whose escapes must stay as they are
     local escaped = text:gsub('[%c"\\]', function(character)
         return escapes[character] or string.format("\\u%04x", character:byte())
@@ -79,7 +89,11 @@ local function encodeTable(value, parts, seen)
         local isFirst = true
         for key, item in pairs(value) do
             local keyType = type(key)
-            if (keyType == "string" or keyType == "number") and type(item) ~= "function" and type(item) ~= "userdata" then
+            if
+                (keyType == "string" or keyType == "number")
+                and type(item) ~= "function"
+                and type(item) ~= "userdata"
+            then
                 if not isFirst then
                     parts[#parts + 1] = ","
                 end
@@ -87,7 +101,9 @@ local function encodeTable(value, parts, seen)
                 local escapedKey = escapedKeys[key]
                 if not escapedKey then
                     escapedKey = escapeString(tostring(key))
-                    if keyType == "string" and #key < 40 then escapedKeys[key] = escapedKey end
+                    if keyType == "string" and #key < 40 then
+                        escapedKeys[key] = escapedKey
+                    end
                 end
                 parts[#parts + 1] = escapedKey
                 parts[#parts + 1] = ":"
@@ -175,10 +191,18 @@ local function decodeString(text, position)
                 elseif code < 0x800 then
                     parts[#parts + 1] = string.char(0xC0 + math.floor(code / 0x40), 0x80 + code % 0x40)
                 elseif code < 0x10000 then
-                    parts[#parts + 1] = string.char(0xE0 + math.floor(code / 0x1000), 0x80 + math.floor(code / 0x40) % 0x40, 0x80 + code % 0x40)
+                    parts[#parts + 1] = string.char(
+                        0xE0 + math.floor(code / 0x1000),
+                        0x80 + math.floor(code / 0x40) % 0x40,
+                        0x80 + code % 0x40
+                    )
                 else
-                    parts[#parts + 1] = string.char(0xF0 + math.floor(code / 0x40000), 0x80 + math.floor(code / 0x1000) % 0x40,
-                        0x80 + math.floor(code / 0x40) % 0x40, 0x80 + code % 0x40)
+                    parts[#parts + 1] = string.char(
+                        0xF0 + math.floor(code / 0x40000),
+                        0x80 + math.floor(code / 0x1000) % 0x40,
+                        0x80 + math.floor(code / 0x40) % 0x40,
+                        0x80 + code % 0x40
+                    )
                 end
                 index = index + 6
             else
@@ -226,8 +250,11 @@ decodeAt = function(text, position)
         if text:sub(position, position) == "]" then
             return result, position + 1
         end
+        -- (counted, not appended: a null is a hole, and the items after it keep their places)
+        local count = 0
         while true do
-            result[#result + 1], position = decodeAt(text, position)
+            count = count + 1
+            result[count], position = decodeAt(text, position)
             position = skipSpace(text, position)
             local separator = text:sub(position, position)
             if separator == "]" then

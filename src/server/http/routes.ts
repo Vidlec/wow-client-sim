@@ -4,7 +4,8 @@
 import { existsSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, sep } from "node:path";
 import type { SetupNeeded } from "../../shared/setup.ts";
-import { readCatalog, switchAddon } from "../addonCatalog.ts";
+import { changeAddons, readCatalog } from "../addonCatalog.ts";
+import { listAddonSourcesCached } from "../addonSources.ts";
 import type { App } from "../app.ts";
 import { CACHE_DIR, SAVED_DIR, SCENARIOS_DIR } from "../config.ts";
 import type { InputEvent } from "../sceneStream.ts";
@@ -92,15 +93,19 @@ export const createRoutes = (app: App): RouteTable => {
     },
     "/api/addonCatalog": {
       GET: () => json(readCatalog(config, app.project?.addons)),
-      // An addon switched on or off: the settings' "addons", then a reload, as the game's AddOns list needs one
+    },
+    "/api/addons/change": {
+      // Several addons switched on and off at once ({ on: [...], off: [...] }): what they need comes on, what needs
+      // one switched off goes off with it (shared/addonDeps.ts); then one reload for all of it
       POST: async (request) => {
         const body = await readBody(request);
-        const name = String(body.name ?? "");
-        const addons = switchAddon(config, name, Boolean(body.enabled), app.project?.addons);
-        if (!addons) return json({ error: `no such addon: ${name}` }, 404);
-        app.keepAddons(addons);
+        const names = (value: unknown): string[] =>
+          Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+        const plan = changeAddons(config, { on: names(body.on), off: names(body.off) }, app.project?.addons);
+        if (!plan) return json({ error: "an addon named is not here (or not for this game)" }, 404);
+        app.keepAddons(plan.addons);
         const boot = await host.start();
-        return json({ catalog: readCatalog(config, app.project?.addons), boot });
+        return json({ catalog: readCatalog(config, app.project?.addons), plan, boot });
       },
     },
     "/api/saved": {
@@ -145,15 +150,24 @@ export const createRoutes = (app: App): RouteTable => {
         return json(app.art.atlas(`${name}${variant}`) ?? app.art.atlas(name) ?? {});
       },
     },
+    // A game sound by file id or path, for the page to play (lua/sound.lua): the file as it is, its type from its bytes
+    "/sound": {
+      GET: async (request, url) => {
+        const target = url.searchParams.get("p") ?? "";
+        const data = await app.art.raw(/^\d+$/.test(target) ? Number(target) : target);
+        if (!data) return json({ error: "unknown" }, 404);
+        const head = new TextDecoder().decode(data.subarray(0, 4));
+        const contentType = head === "OggS" ? "audio/ogg" : head === "RIFF" ? "audio/wav" : "audio/mpeg";
+        return cachedBytes(request, config.build, data, contentType);
+      },
+    },
     "/media": {
       GET: async (_request, url) => {
         const path = url.searchParams.get("p") ?? "";
-        // One of the project's own addons is read from its folder, wherever that is
-        const own = app.project?.addons.find((addon) => {
-          const parts = path.replaceAll("\\", "/").split("/");
-          return parts[0]?.toLowerCase() === "interface" && parts[2]?.toLowerCase() === addon.name.toLowerCase();
-        });
-        const media = await app.art.media(own ? dirname(own.dir) : config.addonsRoot, path);
+        // Read from the addon's own folder, wherever it is: the AddOns folder, a further folder, the project's
+        const addonName = path.replaceAll("\\", "/").split("/")[2]?.toLowerCase() ?? "";
+        const source = listAddonSourcesCached(config, app.project?.addons).get(addonName);
+        const media = await app.art.media(source ? dirname(source.dir) : config.addonsRoot, path);
         return media ? bytes(media.data, media.contentType) : json({ error: "unknown" }, 404);
       },
     },

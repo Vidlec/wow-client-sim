@@ -10,14 +10,22 @@ if not G.GamepadMainActionBarFrame then
     return
 end
 local blocked = 0
-G.hooksecurefunc("DisplayInterfaceActionBlockedMessage", function() blocked = blocked + 1 end)
+G.hooksecurefunc("DisplayInterfaceActionBlockedMessage", function()
+    blocked = blocked + 1
+end)
 
 gamepadInterface(true)
-expect(G.C_InputInterfaceStyle.GetCurrentStyle() == 1 and G.InputUtil.IsGamepadUIEnabled(), "the interface is the gamepad's")
+expect(
+    G.C_InputInterfaceStyle.GetCurrentStyle() == 1 and G.InputUtil.IsGamepadUIEnabled(),
+    "the interface is the gamepad's"
+)
 expect(G.GamepadMainActionBarFrame:IsVisible(), "the gamepad's action bars show")
 expect(not (G.MainActionBar or G.MainMenuBar):IsVisible(), "the usual action bar is hidden")
-expect(G.EditModeManagerFrame:GetActiveLayoutInfo().layoutName == G.LAYOUT_STYLE_GAMEPAD or G.C_EditMode.GetLayouts().activeLayout == 3,
-    "Edit Mode's Gamepad layout is the active one")
+expect(
+    G.EditModeManagerFrame:GetActiveLayoutInfo().layoutName == G.LAYOUT_STYLE_GAMEPAD
+        or G.C_EditMode.GetLayouts().activeLayout == 3,
+    "Edit Mode's Gamepad layout is the active one"
+)
 local barRect = require("widgets").computeRect(G.GamepadMainActionBarFrame)
 expect(barRect and barRect[2] < 300, "the gamepad bars stand at the bottom of the screen")
 saveScene("gamepad-interface")
@@ -57,13 +65,20 @@ wait(0.3)
 expect(not G.GamepadRadial:IsShown(), "Start again closes the radial menu")
 pad("PADRSTICK")
 wait(0.5)
-expect(not G.PingFrame:IsShown() and not G.PingFrame:IsGamePadButtonEnabled(), "R3 again closes the ping wheel and lets the pad go")
+expect(
+    not G.PingFrame:IsShown() and not G.PingFrame:IsGamePadButtonEnabled(),
+    "R3 again closes the ping wheel and lets the pad go"
+)
 
 -- The triggers switch the crossbar: held, LT makes the left set the active one, RT the right one
 local pageUnit = G.GamepadMainActionBarFrame.PageUnit
 local function activeSet()
     local bar = pageUnit:GetActiveBar()
-    for name, each in pairs(pageUnit.actionBars) do if each == bar then return name end end
+    for name, each in pairs(pageUnit.actionBars) do
+        if each == bar then
+            return name
+        end
+    end
 end
 local gamepad, sim = require("gamepad"), require("sim")
 sim.runSecurely(gamepad.press, "PADLTRIGGER")
@@ -82,4 +97,7 @@ expect(blocked == 0, "no action of the game's is blocked as an addon's (" .. blo
 
 gamepadInterface(false)
 expect(G.C_InputInterfaceStyle.GetCurrentStyle() == 0, "back to mouse and keyboard")
-expect(not G.GamepadMainActionBarFrame:IsVisible() and (G.MainActionBar or G.MainMenuBar):IsVisible(), "the usual action bar is back")
+expect(
+    not G.GamepadMainActionBarFrame:IsVisible() and (G.MainActionBar or G.MainMenuBar):IsVisible(),
+    "the usual action bar is back"
+)

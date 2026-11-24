@@ -1,5 +1,5 @@
 /* The game screen's own styles, scoped under the element it is drawn in (.as-engine). The page's reset (Tailwind's)
-   reaches in too: what the game's drawing needs is set here again (inline icons are inline, not blocks). */
+   reaches in too: what the game's drawing needs is set here again. */
 .as-engine .as-viewport {
   position: absolute;
   inset: 0;
@@ -38,7 +38,6 @@
 .as-engine .as-screen:focus {
   box-shadow: inset 0 0 0 2px #4c9aff66;
 }
-.as-engine .as-layer,
 .as-engine .as-world,
 .as-engine .as-inspect {
   position: absolute;
@@ -50,41 +49,6 @@
   left: 0;
   top: 0;
   pointer-events: none;
-}
-
-/* The page's elements as the renderer (renderers/dom.ts), on the screen and on the picture pages */
-.as-engine .as-layer > * {
-  position: absolute;
-  pointer-events: none;
-}
-.as-engine .fs {
-  display: flex;
-  flex-direction: column;
-  white-space: pre;
-  overflow: visible;
-}
-.as-engine .fs > div {
-  flex: none;
-  overflow: visible;
-}
-.as-engine .fs img {
-  display: inline;
-  max-width: none;
-  vertical-align: middle;
-}
-.as-engine .bd > * {
-  position: absolute;
-  background-repeat: no-repeat;
-}
-.as-engine .cursor::after {
-  content: "|";
-  animation: as-blink 1s steps(1) infinite;
-  margin-left: 1px;
-}
-@keyframes as-blink {
-  50% {
-    opacity: 0;
-  }
 }
 
 /* The inspector's boxes: every frame under the mouse, the top one pink; one pointed at in the list, yellow */
@@ -100,4 +64,18 @@
 .as-engine .as-inspect > div.picked {
   outline: 2px solid #ffd100;
   background: #ffd10022;
+}
+
+/* The browser has no WebGPU: said over the empty screen */
+.as-engine .as-no-gpu {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  color: #e8e2d4;
+  font-size: 15px;
+  background: #0d130ecc;
 }

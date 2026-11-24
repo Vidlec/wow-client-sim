@@ -2,6 +2,7 @@
 // polls the state, and calls that change the game ask it to read again (hooks.ts).
 import type { CombatAction } from "../../shared/combat.ts";
 import type {
+  AddonPlan,
   CatalogAddon,
   ExecAnswer,
   FoundNpc,
@@ -77,21 +78,19 @@ export const api = {
   sources: async (): Promise<QuestSources[]> =>
     (await postJson<{ quests?: QuestSources[] }>("/api/sources", {})).quests ?? [],
   addonCatalog: (): Promise<CatalogAddon[]> => getJson("/api/addonCatalog"),
-  switchAddon: (
-    name: string,
-    enabled: boolean,
-  ): Promise<{ catalog?: CatalogAddon[]; boot?: BootAnswer; error?: string }> =>
-    postJson("/api/addonCatalog", { name, enabled }),
+  /** Several addons switched on and off at once, with what they need and what needs them; one reload */
+  changeAddons: (
+    on: readonly string[],
+    off: readonly string[],
+  ): Promise<{ catalog?: CatalogAddon[]; plan?: AddonPlan; boot?: BootAnswer; error?: string }> =>
+    postJson("/api/addons/change", { on, off }),
   saved: (addon: string): Promise<SavedFile> => getJson(`/api/saved?addon=${encodeURIComponent(addon)}`),
   savedReset: (addon: string): Promise<{ boot?: BootAnswer }> => postJson("/api/savedReset", { addon }),
   maps: (): Promise<UiMap[]> => getJson("/api/maps"),
-  input: (event: { type: string; [key: string]: unknown }): Promise<unknown> => postJson("/api/input", event),
   exec: (code: string): Promise<ExecAnswer> => postJson("/api/exec", { code }),
   slash: (text: string): Promise<unknown> => postJson("/api/slash", { text }),
   fireEvent: (name: string, args: unknown[]): Promise<unknown> => postJson("/api/event", { name, args }),
   frameInfo: (id: number): Promise<InspectedFrameInfo> => postJson("/api/frameInfo", { id }),
-  inspect: (x: number, y: number, drawnOnly: boolean): Promise<{ frames?: unknown[] }> =>
-    postJson("/api/inspect", { x, y, drawnOnly }),
   clearErrors: (): Promise<unknown> => postJson("/api/clearErrors"),
   reload: (): Promise<BootAnswer> => postJson("/api/reload"),
   settings: (changes: Partial<ServerSettings>): Promise<ServerSettings> => postJson("/api/settings", changes),

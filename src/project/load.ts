@@ -83,7 +83,6 @@ export const loadProjectAt = async (root: string): Promise<Project> => {
     luaPath: (config.luaPath ?? []).map((path) => resolve(root, path)),
     coverageAddon: config.coverage ?? addons[0]?.name ?? null,
     login: config.login ?? null,
-    flavour: config.flavour ?? null,
     galleryDir: config.gallery ? resolve(root, expandHome(config.gallery)) : null,
   };
 };
@@ -107,7 +106,6 @@ const implicitProject = (root: string): Project => {
     luaPath: [],
     coverageAddon: addons[0]?.name ?? null,
     login: null,
-    flavour: null,
     galleryDir: null,
   };
 };

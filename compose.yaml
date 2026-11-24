@@ -1,0 +1,23 @@
+# AddonSim with Docker Compose. From this folder:
+#
+#   docker compose up --build
+#
+# then open http://localhost:8765/ and choose your AddOns folder in the page: its folder browser shows the host folder
+# mounted at /host, your home folder unless ADDONSIM_FOLDER names another (the drive or folder the game is in):
+#
+#   ADDONSIM_FOLDER=/path/to/games docker compose up --build            (macOS, Linux)
+#   $env:ADDONSIM_FOLDER = "R:\"; docker compose up --build               (Windows PowerShell)
+#
+# The page is served to this machine only (127.0.0.1): it can list the folders mounted. docs/docker.md has the rest.
+services:
+  addonsim:
+    build: .
+    image: addonsim
+    ports:
+      - "127.0.0.1:8765:8765"
+    volumes:
+      - addonsim-data:/data
+      - ${ADDONSIM_FOLDER:-~}:/host:ro
+
+volumes:
+  addonsim-data:

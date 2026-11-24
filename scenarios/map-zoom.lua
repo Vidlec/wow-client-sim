@@ -10,8 +10,9 @@ local container = map.ScrollContainer
 expect(mapZoomLevelCount() == 4, "the Barrens has the game's 4 zoom levels (got " .. mapZoomLevelCount() .. ")")
 local outScale = map:GetCanvasScale()
 local scaleChanges = 0
-hooksecurefunc = G.hooksecurefunc
-G.hooksecurefunc(map, "OnCanvasScaleChanged", function() scaleChanges = scaleChanges + 1 end)
+G.hooksecurefunc(map, "OnCanvasScaleChanged", function()
+    scaleChanges = scaleChanges + 1
+end)
 
 -- A point of the map under the cursor stays under it as it zooms in
 local W = require("widgets")
@@ -28,13 +29,18 @@ wheel({ pointX, pointY }, 1)
 wait(0.6)
 expect(math.abs(map:GetCanvasZoomPercent() - 1) < 0.001, "it stops at the deepest level")
 local deepScale = map:GetCanvasScale()
-expect(math.abs(deepScale / outScale - 2.14) < 0.02, string.format("2.14 times closer, as the map's data says (%.2f)", deepScale / outScale))
+expect(
+    math.abs(deepScale / outScale - 2.14) < 0.02,
+    string.format("2.14 times closer, as the map's data says (%.2f)", deepScale / outScale)
+)
 
 -- Dragging pans; the view stays on the map
 -- (the game's own map gives a rectangle object, the simulator's stand-in its left and top)
 local function viewLeftTop()
     local first, second = map:GetViewRect()
-    if type(first) == "table" then return first:GetLeft(), first:GetTop() end
+    if type(first) == "table" then
+        return first:GetLeft(), first:GetTop()
+    end
     return first, second
 end
 local left = viewLeftTop()
@@ -46,7 +52,9 @@ wait(0.6)
 local viewLeft, viewTop = viewLeftTop()
 expect(viewLeft >= -0.001 and viewTop >= -0.001, "it cannot be dragged past the map's edge")
 
-wheel({ pointX, pointY }, -1); wheel({ pointX, pointY }, -1); wheel({ pointX, pointY }, -1)
+wheel({ pointX, pointY }, -1)
+wheel({ pointX, pointY }, -1)
+wheel({ pointX, pointY }, -1)
 wait(0.6)
 expect(not (map:GetCanvasZoomPercent() > 0.001), "the wheel zooms back out")
 

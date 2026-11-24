@@ -10,7 +10,6 @@ export type FactionInfo = { name: string; color: string };
 export type QualityInfo = { name: string; color: string };
 
 /** A picture behind the interface where the game draws its world: the first whose word is in the continent's name */
-export type LoadingScreen = { continentMatch: string; fileId: number };
 
 export type Flavour = {
   id: string;
@@ -25,15 +24,8 @@ export type Flavour = {
   /** By the game's quality index: 0 poor, 1 common, 2 uncommon, 3 rare, 4 epic, 5 legendary… */
   qualities: readonly QualityInfo[];
   colors: {
-    /** The game's gold: headings, quest titles (NORMAL_FONT_COLOR) */
-    gold: string;
-    /** Highlight text (HIGHLIGHT_FONT_COLOR) */
-    highlight: string;
     money: { gold: string; silver: string; copper: string };
-    /** The page's accent, where it takes the flavour's tint */
-    accent: string;
   };
-  loadingScreens: readonly LoadingScreen[];
   /** The kinds of instance the game knows, as GetInstanceInfo names them */
   instanceTypes: readonly { id: string; name: string }[];
 };
