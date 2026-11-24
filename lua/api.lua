@@ -1635,7 +1635,29 @@ function api.install(config)
     G.ReloadUI = function()
         sim.requestReload = true
     end
-    G.C_UI = { Reload = G.ReloadUI }
+    -- (UIManagerDocumentation: the frames are never nil; the ping UI scales the cursor by UIParent's scale. No display
+    -- with a notch: its safe regions are the whole screen)
+    G.C_UI = {
+        Reload = G.ReloadUI,
+        GetUIParent = function()
+            return G.UIParent
+        end,
+        GetWorldFrame = function()
+            return G.WorldFrame
+        end,
+        DoesAnyDisplayHaveNotch = function()
+            return false
+        end,
+        ShouldUIParentAvoidNotch = function()
+            return false
+        end,
+        GetTopLeftNotchSafeRegion = function()
+            return 0, 0, 0, 0
+        end,
+        GetTopRightNotchSafeRegion = function()
+            return 0, 0, 0, 0
+        end,
+    }
     G.Logout = function() end
     G.Quit = function() end
     G.Screenshot = function() end
