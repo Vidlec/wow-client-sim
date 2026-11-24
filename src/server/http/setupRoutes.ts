@@ -4,10 +4,13 @@ import {
   type FolderCheckRequest,
   type FolderKind,
   type FolderListRequest,
+  type ResetChoice,
   SETUP_ROUTES,
   type SettingsChange,
 } from "../../shared/setup.ts";
 import type { App } from "../app.ts";
+import { readClientBuilds } from "../clientBuilds.ts";
+import { resolveInterfaceRoot } from "../config.ts";
 import { findFlavour } from "../flavours/index.ts";
 import { listFolder } from "../setup/browse.ts";
 import { checkFolder } from "../setup/detect.ts";
@@ -26,6 +29,24 @@ export const createSetupRoutes = (app: App): RouteTable => ({
     POST: async (request) => json(app.change((await readBody(request)) as SettingsChange)),
   },
   [SETUP_ROUTES.downloadInterface]: { POST: () => json(app.downloadInterface()) },
+  // What the cache holds of the game's art and tables (the settings' "The game's art")
+  [SETUP_ROUTES.art]: { GET: () => json(app.readArtInfo()) },
+  // The client's builds: in use, the newest on Blizzard's servers, those wago.tools has, the interface source's
+  [SETUP_ROUTES.builds]: {
+    GET: async () =>
+      json(
+        await readClientBuilds(findFlavour(app.settings.flavour), app.config.build, resolveInterfaceRoot(app.settings)),
+      ),
+  },
+  // Back to a fresh setup: the settings, and what the body chooses ({ interface, cache, saved }) deleted
+  [SETUP_ROUTES.reset]: {
+    POST: async (request) => {
+      const body = (await readBody(request)) as Partial<ResetChoice>;
+      return json(
+        await app.reset({ interface: body.interface === true, cache: body.cache === true, saved: body.saved === true }),
+      );
+    },
+  },
   [SETUP_ROUTES.checkFolder]: {
     POST: async (request) => {
       const body = (await readBody(request)) as Partial<FolderCheckRequest>;

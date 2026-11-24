@@ -50,6 +50,13 @@ export const getAtlas = (name: string): AtlasInfo | null | undefined => {
   return cached instanceof Promise ? undefined : cached;
 };
 
+/** How many atlases asked for are still on their way */
+export const countAtlasesLoading = (): number => {
+  let count = 0;
+  for (const entry of cache.values()) if (entry instanceof Promise) count++;
+  return count;
+};
+
 /** No atlas asked for is still on its way */
 export const areAtlasesSettled = (): boolean => {
   for (const entry of cache.values()) {

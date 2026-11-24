@@ -7,6 +7,7 @@ export const forever: Flavour = {
   description: "The original game on today's client (1.60.1): the Camelot game in the Mainline family.",
   client: { version: "1.60.1", buildNumber: "71037", buildDate: "Nov 1 2026", interface: 16001, projectId: 1 },
   wagoBuild: "1.60.1.71037",
+  product: "wowf",
   // Lines for either load, as the interface's Startup.lua conditions show
   gameTypes: ["mainline", "camelot"],
   family: "Mainline",
@@ -16,6 +17,8 @@ export const forever: Flavour = {
   tocSuffixes: ["_Forever", "_Camelot", "_Vanilla", ""],
   interfaceTocSuffixes: ["_Camelot", "_Mainline", ""],
   wowlessProduct: "wowf",
+  // (the keyring left of the reagent bag on the bag bar, as in the game)
+  hasKeyring: true,
   wowlessRef: "c695caab195f06367aec63b9c7ac86241b1f390d",
   atlasVariant: "-c60",
   interfaceSource: { repository: "Gethe/wow-ui-source", branch: "forever" },
@@ -65,5 +68,9 @@ export const forever: Flavour = {
     "SkillLine",
     "SkillLineAbility",
     "Talent",
+    // (the sounds of the game's windows: a sound kit's files, lua/sound.lua)
+    "SoundKitEntry",
+    // (the atlases' names, as the client looks them up: src/server/assets/atlases.ts)
+    "UiTextureAtlasElement",
   ],
 };

@@ -530,6 +530,32 @@ expect(book.GetClassSkillLineInfo().name == "Mage", "the class's line (the Gener
 sim.runSecurely(G.PlayerSpellsUtil.ToggleSpellBookFrame)
 wait(0.3)
 expect(G.PlayerSpellsFrame.SpellBookFrame:IsVisible(), "the spellbook opens with its spells")
+-- Its page is the parchment atlas its Camelot code names with "-C60" (one that exists only under that name), and
+-- every spell is drawn over it: a frame given to the list from a pool brings its parts above it
+local spellBook = G.PlayerSpellsFrame.SpellBookFrame
+local page = spellBook.BookBGHalved:IsShown() and spellBook.BookBGHalved or spellBook.BookBGLeft
+expect(
+    G.C_Texture.GetAtlasInfo(page:GetAtlas()) ~= nil,
+    "the spellbook's page has its art (" .. tostring(page:GetAtlas()) .. ")"
+)
+local lowestSpellPart
+local function findLowest(frame)
+    for _, child in ipairs({ frame:GetChildren() }) do
+        if child:IsVisible() then
+            lowestSpellPart = math.min(lowestSpellPart or math.huge, child:GetFrameLevel())
+            findLowest(child)
+        end
+    end
+end
+findLowest(spellBook.PagedSpellsFrame)
+expect(
+    lowestSpellPart and lowestSpellPart > spellBook:GetFrameLevel(),
+    "the spells are drawn over the page (lowest part at "
+        .. tostring(lowestSpellPart)
+        .. ", the book at "
+        .. spellBook:GetFrameLevel()
+        .. ")"
+)
 sim.runSecurely(G.PlayerSpellsUtil.ToggleSpellBookFrame)
 wait(0.1)
 

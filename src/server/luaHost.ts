@@ -9,6 +9,7 @@ import { createFrameReader, type FrameReader, type HostReply } from "./frameRead
 import { createLineReader } from "./lineReader.ts";
 import { createMutex } from "./mutex.ts";
 import { writeRuntimeConfig } from "./runtimeConfig.ts";
+import type { StartReporter } from "./startProgress.ts";
 
 export type HostRequest = { op: string; [key: string]: unknown };
 export type HostAnswer = Record<string, unknown>;
@@ -51,6 +52,8 @@ export class LuaHost {
   runtimeName = "runtime.json";
   /** Why it may not start now (the setup is not done), or null */
   guard: () => string | null = () => null;
+  /** Told how the start goes, part by part (the setup shows it): src/server/startProgress.ts */
+  progress: StartReporter | null = null;
 
   readonly #mutex = createMutex();
   #running: Running | null = null;
@@ -77,7 +80,9 @@ export class LuaHost {
     return this.#mutex.run(async () => {
       await this.#stopLocked(true);
       try {
-        const runtimePath = await writeRuntimeConfig(this.config, this.art, this.runtimeName);
+        const progress = this.progress ?? undefined;
+        const runtimePath = await writeRuntimeConfig(this.config, this.art, this.runtimeName, progress);
+        progress?.begin("boot", "the game's interface and the addons loading");
         const process = Bun.spawn([this.luajit, join(ROOT, "lua", "host.lua"), ROOT, runtimePath], {
           cwd: ROOT,
           stdin: "pipe",
@@ -103,6 +108,12 @@ export class LuaHost {
         failure || !this.isRunning
           ? { state: "failed", error: failure ?? "the simulator stopped" }
           : { state: "running" };
+      if (this.status.state === "failed") this.progress?.fail("boot", this.status.error ?? "it did not start");
+      else {
+        // (its time is the step's own: the detail says how it went)
+        const errors = typeof this.boot.errors === "number" ? this.boot.errors : 0;
+        this.progress?.finish("boot", errors === 0 ? "no errors" : `${errors} ${errors === 1 ? "error" : "errors"}`);
+      }
       return this.boot;
     });
   }
@@ -131,8 +142,8 @@ export class LuaHost {
   }
 
   /**
-   * The answer's JSON text, and the binary frame that followed it when there was one (the scene stream's, asked for
-   * with binary: true; lua/stream.lua)
+   * The answer's JSON text, and the binary frame that followed it when there was one (the scene stream's: a frame or a
+   * whole scene; lua/stream.lua)
    */
   requestWithBinary(request: HostRequest): Promise<HostReply> {
     const asked = performance.now();

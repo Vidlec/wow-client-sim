@@ -142,6 +142,11 @@ the daemon while it runs). A project's `.mcp.json`:
 - Code: `src/sdk/` (engine, daemon, SDK), `src/mcp/`, `src/cli/main.ts`; `lua/sdkplay.lua` (play.lua kept up as a
   live game) and `lua/sdkui.lua` (frames and state as data). The design and its costs: `docs/sdk.md`.
 - Arrow functions only in TypeScript.
+- Mac, Windows and Linux alike: paths through `node:path` (never a hard-coded separator), a library's or an
+  executable's name per system (`.dll`/`.dylib`/`.so`, `.exe`), and no rename over a file that exists on Windows.
+- The native core (`native/`, Rust) is required: the scene reaches the page only as its binary frames (there is no
+  JSON stream to fall back to). `src/server/nativeCore.ts` builds it before a simulator starts when it is missing or
+  older than its sources; `lua/native.lua` stops with how to build it when it cannot load.
 - Lua is formatted by StyLua (`stylua.toml`: 120 columns, 4 spaces, double quotes; `bun run format:lua`) and linted
   by luacheck (`.luacheckrc`); both are in `bun run lint:lua`. The tools: `bun run tools:lua` fetches the pinned
   versions into `tools/bin` on Windows (elsewhere it says how to install them); `lua/vendor` is left as its authors

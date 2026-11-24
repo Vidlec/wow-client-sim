@@ -18,7 +18,37 @@ export const SETUP_ROUTES = {
   downloadInterface: "/api/setup/downloadInterface",
   checkFolder: "/api/setup/checkFolder",
   listFolder: "/api/setup/listFolder",
+  art: "/api/setup/art",
+  reset: "/api/setup/reset",
+  builds: "/api/setup/builds",
 } as const;
+
+/** The client's builds (GET /api/setup/builds): the one in use, the newest anywhere, and which can be used */
+export type ClientBuilds = {
+  /** The build the simulator runs ("1.60.1.71037") */
+  current: string;
+  /** The flavour's own build (settings.build "" means this one) */
+  flavourBuild: string;
+  /** What Blizzard's patch server says each region runs */
+  blizzard: { region: string; build: string }[];
+  /** The builds wago.tools has, newest first: only these can be used (the game's tables come from it) */
+  wago: string[];
+  /** The build the interface source in use is at (its version.txt), and the newest on its branch */
+  interfaceInUse: string | null;
+  interfaceLatest: string | null;
+  /** What could not be asked (no network, a server down) */
+  problems: string[];
+};
+
+/** POST /api/setup/reset's body: what is deleted besides the settings (which always go back to their defaults) */
+export type ResetChoice = {
+  /** The game's interface source the setup downloaded (not a checkout of your own) */
+  interface: boolean;
+  /** The game's files from Blizzard's CDN and tables from wago.tools, wowless's data, the boot cache */
+  cache: boolean;
+  /** The simulator's saved variables and its own state (never the game's WTF folder) */
+  saved: boolean;
+};
 
 /** One WoW client the simulator can be (WoW: Forever today; Classic and Retail later) */
 export type FlavourInfo = {
@@ -75,6 +105,9 @@ export type Settings = {
   tocSuffixes: string[];
 };
 
+/** What a reset did: the setup as it is now, what was deleted, and what could not be (a file in use) */
+export type ResetAnswer = SetupState & { deleted: string[]; failures: string[] };
+
 /** POST /api/setup's body: only the settings to change */
 export type SettingsChange = Partial<Settings>;
 
@@ -115,6 +148,49 @@ export type SimulatorStatus = {
   error?: string;
 };
 
+/** One part of the simulator's start, as the setup shows it */
+export type StartStep = {
+  id: "native" | "blizzard" | "listfile" | "wowless" | "tables" | "atlases" | "highlights" | "boot";
+  label: string;
+  state: "waiting" | "running" | "done" | "failed";
+  /** What it is at or came to: "UiTextureAtlas", "12.4 MB", "from the cache", an error */
+  detail?: string | undefined;
+  /** Its progress, when it counts something (tables fetched, of how many) */
+  done?: number | undefined;
+  total?: number | undefined;
+  /** How long it took, or has taken so far */
+  seconds?: number | undefined;
+};
+
+/** The last start of the simulator, part by part (the first one fetches the game's art and tables) */
+export type StartProgress = { startedAt: string; steps: StartStep[] };
+
+/** What the cache holds of the game's art and tables, for the settings (GET /api/setup/art) */
+export type ArtInfo = {
+  build: string;
+  locale: string;
+  cacheDir: string;
+  /** The game's file list (wago.tools' listfile), indexed: paths to file ids */
+  listfile: {
+    isReady: boolean;
+    rows?: number | undefined;
+    downloadedBytes?: number | undefined;
+    builtAt?: string | undefined;
+    error?: string | null | undefined;
+  };
+  /** The game's tables (DB2) fetched, for this build and language */
+  tables: { count: number; bytes: number };
+  /** Game files fetched (textures, fonts, sounds, maps) and the pictures made of them */
+  files: { count: number; bytes: number };
+  pictures: { count: number; bytes: number };
+  /** wowless's data about the client's API */
+  wowless: { product: string; isFetched: boolean };
+  /** Blizzard's CDN's indexes kept (every build's), which the game's files are found with */
+  blizzardIndexes: { count: number; bytes: number };
+  /** Everything in the cache folder */
+  totalBytes: number;
+};
+
 export type SetupState = {
   /** Nothing is missing: the simulator can run (and runs, when simulator.state says so) */
   isReady: boolean;
@@ -134,6 +210,10 @@ export type SetupState = {
   paths: { settingsFile: string; dataDir: string; cacheDir: string; savedDir: string; downloadedInterface: string };
   /** The app's version */
   version: string;
+  /** The system the server runs on ("win32", "darwin", "linux"...): the paths the setup shows as examples */
+  platform: string;
+  /** The simulator's last start, part by part; null before the first */
+  start: StartProgress | null;
 };
 
 export type SetupAnswer = SetupState & {

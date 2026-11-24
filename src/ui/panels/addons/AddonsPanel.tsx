@@ -330,7 +330,7 @@ export const AddonsPanel = () => {
 
   return (
     <>
-      <AddonFolders catalog={catalog} />
+      <AddonFolders catalog={catalog} isCollapsible />
       <div className="flex items-center gap-1.5">
         <SearchField aria-label="Filter your addons" value={filter} onChange={setFilter} className="grow">
           <SearchField.Group>
@@ -434,9 +434,7 @@ export const AddonsPanel = () => {
         </div>
       ) : shown.length === 0 ? (
         <EmptyState icon={<Layers />}>
-          {catalog.length
-            ? "No addon matches."
-            : "No addons found: choose your AddOns folder in Settings, or add a folder below."}
+          {catalog.length ? "No addon matches." : "No addons found: add a folder of addons in Addon folders above."}
         </EmptyState>
       ) : (
         <div className="flex flex-col gap-2">

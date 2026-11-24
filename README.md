@@ -22,14 +22,16 @@ the MCP server).
 - **LuaJIT** 2.1, which runs the simulator. The setup finds it on the PATH or where its installers put it, and says
   how to install it when it is missing (Windows: `winget install DEVCOM.LuaJIT`; macOS: `brew install luajit`; Linux:
   your system's `luajit` package).
-- **Your addons**: the game's `Interface\AddOns` folder (or any folder of addons). The setup finds the game's own
-  folders (`World of Warcraft\_forever_\Interface\AddOns`, from the registry and the usual places).
+- **Your addons** (optional): the game's `Interface\AddOns` folder (or any folder of addons). The setup finds the
+  game's own folders (`World of Warcraft\_forever_\Interface\AddOns`, from the registry and the usual places). The
+  game runs without one; choose it later in the Addons tab.
 - **The game's interface source** at the client's build ([Gethe/wow-ui-source](https://github.com/Gethe/wow-ui-source),
   branch `forever`). The setup downloads it for you with one button, or uses a checkout you already have.
 - **A network connection the first time**: the game's art and tables are fetched from [wago.tools](https://wago.tools)
   at the client's build and cached (a few minutes on the first start, then never again).
 - **Google Chrome or Edge**, only for the picture tools (`bun run shots`, comparisons).
-- **[Bun](https://bun.sh)** 1.4 or newer, and optionally **[Rust](https://rustup.rs)** for the native core (below).
+- **[Bun](https://bun.sh)** 1.4 or newer, and **[Rust](https://rustup.rs)** for the native core (below): the scene's
+  walk and layout and the stream's store, which the simulator does not run without.
 
 Or only **Docker**: the image has all of it (below).
 
@@ -39,8 +41,8 @@ AddonSim is built from its sources; there are no binaries to download.
 
 ```
 bun install
-bun run native         (optional, needs Rust: the native core, which draws the scene faster; without it the scene
-                        stream is JSON, made in Lua)
+bun run native         (the native core, with Rust's cargo; the server, the runner and the SDK also build it
+                        themselves when it is missing or older than its sources)
 bun run start          (or: bun run dev, which restarts the server when its own code changes)
 ```
 
@@ -53,8 +55,9 @@ in the page's **Addons** tab.
 docker compose up --build
 ```
 
-Then open http://localhost:8765/ and choose your AddOns folder in the page's folder browser (your home folder is
-mounted read-only for it; `ADDONSIM_FOLDER` names another, the drive the game is on say). The image has Bun, LuaJIT
+Then open http://localhost:8765/ and finish the setup; your AddOns folder is optional, chosen in the page's folder
+browser now or later (your home folder is mounted read-only for it; `ADDONSIM_FOLDER` names another, the drive the
+game is on say). The image has Bun, LuaJIT
 and the native core built in; the game's files, saved variables, the interface source and the settings are kept in
 the `addonsim-data` volume. A project's scenarios run in it too (`addonsim test`): [docs/docker.md](docs/docker.md).
 
@@ -80,7 +83,7 @@ first run from nothing).
 | Setting | What it does |
 | --- | --- |
 | `flavour` | The client the simulator is: `forever` (WoW: Forever). Each is one file in `src/server/flavours/`: its version, build, TOC suffixes, atlas names, interface source, install folder. |
-| `addonsRoot` | Your `Interface/AddOns` folder. |
+| `addonsRoot` | Your `Interface/AddOns` folder; empty for none (the game runs with its own interface only). |
 | `addons` | The addons that load, by folder name (the Addons tab changes this). |
 | `interfaceRoot` | The game's interface source (`wow-ui-source/Interface`); empty for the one the setup downloaded. |
 | `blizzardAddons` | `"all"`: the game's whole interface, as the client loads it. `"light"`: a light stand-in interface (faster to start, less faithful). |
@@ -235,7 +238,9 @@ export default defineProject({
   config above), or the one `--project <dir>` names. In this checkout with no project they play the simulator's own
   **self-test**: `scenarios/`, with a small fixture addon (`scenarios/fixtures/addons/SimFixture`), a plugin
   (`scenarios/fixtures/plugins`) and a module folder (`scenarios/fixtures/lib`); scenarios that need the quest
-  database add QuestieDB with `--@addons`.
+  database add its stand-in with `--@addons SimQuestieDB` (`scenarios/fixtures/addons/SimQuestieDB`: the few quests,
+  creatures and items they use, copied from QuestieDB). They need no addon from outside; scenarios of an addon live
+  with that addon (its own project).
 - `bun run start --project <dir>` (or started in a project's folder) serves the project: its addons on the Addons
   tab (marked "project"; switching them lasts for the session, the settings' list is untouched), watched for changes
   (auto-reload), its plugins loaded, its scenes on the comparison pages. Without a project the server runs the
@@ -298,8 +303,9 @@ which documents each function), a small API kept stable:
   strip; `panels/` one folder per panel; `sim/` the typed API client and the state store; `flavours/` what is
   game-flavoured (classes, races, colours), one file per flavour.
 - `src/cli/`: the scenario runner (`suite.ts`, the CLI `play.ts`), the picture tool, coverage and wowless.
-- `native/`: the native core in Rust (the scene's walk and layout, the stream's store), loaded by LuaJIT's FFI when
-  built (`bun run native`). `Dockerfile` and `docker/`: the image. `src/project/`: projects (their config, how one is found) and the results the runner returns.
+- `native/`: the native core in Rust (the scene's walk and layout, the stream's store), loaded by LuaJIT's FFI; the
+  simulator does not run without it. `src/server/nativeCore.ts` builds it with cargo before a simulator starts when it
+  is missing or older than its sources (`bun run native` by hand). `Dockerfile` and `docker/`: the image. `src/project/`: projects (their config, how one is found) and the results the runner returns.
 - `lua/`: the simulator itself (`lua/tests/`: its tests that need nothing of the game; `lua/vendor/`: LibDeflate).
 - `recorder/`: the recorder addon for the real game; `tools/`: the LuaJIT profilers and the probe; `types/`: the
   scenario API's types for projects' editors; `docs/`: the SDK's guide, designs and the change notes.

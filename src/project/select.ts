@@ -1,8 +1,9 @@
 // Which project a command works on: the one asked for (--project <dir>), else the one the working folder is in (its
 // nearest addonsim.config.ts above), else, in the simulator's own checkout, the simulator's self-test project: its
 // scenarios/ played against the small fixture addon in scenarios/fixtures/addons (no other addon loads unless a
-// scenario names it: QuestieDB, for those that need the quest database), with a plugin and a module folder of its
-// own (scenarios/fixtures/plugins, scenarios/fixtures/lib), so the simulator tests itself.
+// scenario names it: SimQuestieDB, the quest database's stand-in there, for those that need quests and creatures),
+// with a plugin and a module folder of its own (scenarios/fixtures/plugins, scenarios/fixtures/lib), so the simulator
+// tests itself with nothing from outside.
 import { existsSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { ROOT } from "../server/paths.ts";
@@ -11,18 +12,21 @@ import { findProjectRoot, loadProject, loadProjectAt } from "./load.ts";
 
 /** The fixture addon the simulator's own scenarios play with */
 export const FIXTURE_ADDON = "SimFixture";
+/** QuestieDB's stand-in among the fixtures: loaded only by the scenarios that name it (--@addons SimQuestieDB) */
+const QUEST_DATA_ADDON = "SimQuestieDB";
 
 /** The simulator's self-test project: its scenarios/ folder, with the fixture addon */
 export const simulatorProject = (): Project => {
   const scenariosDir = join(ROOT, "scenarios");
-  const fixture: ProjectAddon = { name: FIXTURE_ADDON, dir: join(scenariosDir, "fixtures", "addons", FIXTURE_ADDON) };
-  const addons = existsSync(fixture.dir) ? [fixture] : [];
+  const fixtureDir = (name: string): ProjectAddon => ({ name, dir: join(scenariosDir, "fixtures", "addons", name) });
+  const fixture = fixtureDir(FIXTURE_ADDON);
+  const addons = [fixture, fixtureDir(QUEST_DATA_ADDON)].filter((addon) => existsSync(addon.dir));
   return {
     root: ROOT,
     configPath: null,
     addons,
     installed: [],
-    load: addons.map((addon) => addon.name),
+    load: addons.filter((addon) => addon === fixture).map((addon) => addon.name),
     scenariosDir,
     // A plugin and a module folder of its own, so the suite tries the plugin API and the project's luaPath too
     plugins: [join(scenariosDir, "fixtures", "plugins", "fixture-party.lua")],

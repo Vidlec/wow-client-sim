@@ -46,6 +46,12 @@ end
 function tooltipMethods:SetOwner(owner, anchor, x, y)
     local s = S[self]
     s.owner, s.anchor, s.anchorX, s.anchorY = owner, anchor or "ANCHOR_RIGHT", x or 0, y or 0
+    -- A new owner lets go of where the tooltip was placed (but ANCHOR_PRESERVE, which keeps it): with ANCHOR_NONE the
+    -- caller places it with one point, as GameTooltip_SetDefaultAnchor does, and a point kept from the tooltip before
+    -- held it by two (the experience bar's tooltip came out narrower than its text)
+    if s.anchor ~= "ANCHOR_PRESERVE" then
+        self:ClearAllPoints()
+    end
     self:ClearLines()
 end
 function tooltipMethods:GetOwner()
@@ -75,6 +81,13 @@ function tooltipMethods:ClearLines()
     sim.runScript(self, "OnTooltipCleared")
     sim.touch()
 end
+-- A line added to a tooltip already shown (the keyring's: SetText shows it, then AddLine) resizes it, as in the
+-- game; one not shown yet is laid out by its Show
+local function relayoutShown(tooltip)
+    if tooltip:IsShown() then
+        ui.layoutTooltip(tooltip)
+    end
+end
 function tooltipMethods:AddLine(text, r, g, b, isWrapped)
     local s = S[self]
     s.lineCount = (s.lineCount or 0) + 1
@@ -87,6 +100,7 @@ function tooltipMethods:AddLine(text, r, g, b, isWrapped)
     S[line.left].tooltipWrap = isWrapped
     line.left:Show()
     line.right:Hide()
+    relayoutShown(self)
     sim.touch()
 end
 function tooltipMethods:AddDoubleLine(left, right, lr, lg, lb, rr, rg, rb)
@@ -99,6 +113,7 @@ function tooltipMethods:AddDoubleLine(left, right, lr, lg, lb, rr, rg, rb)
     line.right:SetText(right or " ")
     line.right:SetTextColor(rr or 1, rg or 1, rb or 1)
     line.right:Show()
+    relayoutShown(self)
     sim.touch()
 end
 function tooltipMethods:SetText(text, r, g, b, a, isWrapped)

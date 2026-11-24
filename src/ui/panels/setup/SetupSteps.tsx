@@ -1,9 +1,11 @@
-// The setup's parts, used by the first-run flow and the Settings panel alike: the game's flavour, your AddOns folder,
+// The setup's parts, used by the first-run flow and the Settings panel alike: the game's flavour, your addon folders,
 // the game's interface source (found, chosen, or downloaded with its progress) and LuaJIT
 import { ArrowDownToLine, CircleCheckFill, CircleExclamationFill, Terminal } from "@gravity-ui/icons";
 import { Button, Chip, ProgressBar, toast } from "@heroui/react";
 import { formatBytes } from "../../components/format.ts";
 import { changeSettings, downloadInterface, type SetupState } from "../../sim/setup.ts";
+import { AddonFolders } from "../addons/AddonFolders.tsx";
+import { getExamplePath } from "./examplePaths.ts";
 import { FolderChoice } from "./FolderChoice.tsx";
 
 type StepProps = { setup: SetupState };
@@ -47,16 +49,8 @@ export const FlavourStep = ({ setup }: StepProps) => (
   </div>
 );
 
-export const AddonsFolderStep = ({ setup }: StepProps) => (
-  <FolderChoice
-    kind="addons"
-    label="Your Interface\AddOns folder"
-    value={setup.settings.addonsRoot}
-    detected={setup.detected.addonsRoots}
-    placeholder="C:\Program Files\World of Warcraft\_forever_\Interface\AddOns"
-    onSave={(path) => save({ addonsRoot: path })}
-  />
-);
+// (the Addons tab has the same list, folded)
+export const AddonsFolderStep = () => <AddonFolders catalog={null} />;
 
 const DownloadBox = ({ setup }: StepProps) => {
   const download = setup.interfaceDownload;
@@ -130,7 +124,7 @@ export const InterfaceStep = ({ setup }: StepProps) => (
       label="A checkout of wow-ui-source: its Interface folder"
       value={setup.settings.interfaceRoot}
       detected={setup.detected.interfaceRoots}
-      placeholder="C:\wow-ui-source\Interface"
+      placeholder={getExamplePath(setup, "interface")}
       onSave={(path) => save({ interfaceRoot: path })}
     />
     <div className="flex items-center gap-3 text-xs text-muted">
@@ -173,7 +167,7 @@ export const LuajitStep = ({ setup }: StepProps) => {
         label="Or its executable, if it is elsewhere"
         value={setup.settings.luajitPath}
         detected={[]}
-        placeholder="C:\LuaJIT\bin\luajit.exe"
+        placeholder={getExamplePath(setup, "luajit")}
         onSave={(path) => save({ luajitPath: path })}
       />
     </div>

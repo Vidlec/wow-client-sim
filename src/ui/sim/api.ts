@@ -21,7 +21,10 @@ import type {
 export type GameAction =
   | { action: "accept" | "complete" | "turnIn" | "abandon" | "markDone"; questId: number }
   | { action: "progress"; questId: number; objective: number; amount: number }
-  | { action: "profile"; profile: { name?: string; level?: number; race?: string; class?: string; money?: number } }
+  | {
+      action: "profile";
+      profile: { name?: string; level?: number; race?: string; class?: string; money?: number; restedXp?: number };
+    }
   | { action: "position"; uiMapId: number; x: number; y: number }
   | { action: "kill"; npcId: number; loot?: boolean }
   | { action: "loot"; itemId: number; count: number }

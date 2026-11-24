@@ -1,4 +1,4 @@
---@addons QuestieDB, SimFixture
+--@addons SimQuestieDB, SimFixture
 -- The player dying and coming back (lua/combat.lua): a quilboar far above a level 6 mage's level beats her; she dies
 -- (PLAYER_DEAD, the game's release dialog), the creature gives up and she is out of combat; she releases her spirit
 -- (a ghost: PLAYER_ALIVE) and comes back at her corpse (PLAYER_UNGHOST) with half her health and mana.

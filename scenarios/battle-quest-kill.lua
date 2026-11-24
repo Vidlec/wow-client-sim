@@ -1,7 +1,7 @@
---@addons QuestieDB, SimFixture
+--@addons SimQuestieDB, SimFixture
 -- A fight to the death that counts for a quest (lua/combat.lua): two quilboar near a level 9 orc warrior in Durotar
 -- see him and come at him; he fights them with his swings and Heroic Strike. Each death counts for Encroachment,
--- gives experience and leaves loot (the quest from QuestieDB); the fight's end lets him out of combat, and resting
+-- gives experience and leaves loot (the quest from the quest database); the fight's end lets him out of combat, and resting
 -- brings his health back.
 setProfile({ level = 9, race = "Orc", class = "WARRIOR", xp = 0, xpMax = 6500 })
 moveTo(1411, 0.52, 0.62) -- Durotar

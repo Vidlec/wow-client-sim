@@ -351,7 +351,11 @@ function wowless.apply(root, config, isWholeInterface)
         if type(spec) == "table" and spec.secureonly and type(fullName) == "string" then
             sim.secureOnlyFunctions[fullName] = true
         end
-        if type(spec) == "table" and type(fullName) == "string" then
+        -- (true: wowless knows the client has it, not what it answers; a fifth of its functions. Without the
+        -- recorder's dump these are the only word that the whole interface's GetGuildLogoInfo, SetChatWindowShown,
+        -- C_AccountServices... exist, so they are added as plain stand-ins; they improve nothing already there)
+        local isBare = spec == true
+        if (type(spec) == "table" or isBare) and type(fullName) == "string" then
             local namespace, functionName = fullName:match("^([%w_]+)%.([%w_]+)$")
             local target = G
             if namespace then
@@ -370,11 +374,13 @@ function wowless.apply(root, config, isWholeInterface)
             end
             if type(target) == "table" and functionName then
                 local existing = rawget(target, functionName)
-                if existing ~= nil and sim.standIns[existing] then
+                if existing ~= nil and sim.standIns[existing] and not isBare then
                     rawset(target, functionName, makeStandIn(fullName, spec))
                     summary.replaced = summary.replaced + 1
                 elseif existing == nil and isWholeInterface then
-                    rawset(target, functionName, makeStandIn(fullName, spec))
+                    local standIn = isBare and require("apisurface").makeBareStandIn(fullName)
+                        or makeStandIn(fullName, spec)
+                    rawset(target, functionName, standIn)
                     summary.added = summary.added + 1
                 end
             end

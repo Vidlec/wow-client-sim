@@ -46,6 +46,10 @@ local function readKeptJson(path)
     end)
 end
 local config = readJson(configPath) or {}
+-- (no AddOns folder chosen yet: the game runs with only the game's own interface and any further addon folders)
+if config.addonsRoot == "" then
+    config.addonsRoot = nil
+end
 -- A project's Lua module folders (its addonsim.config.ts luaPath), searched before the simulator's own: what its
 -- scenarios and plugins require() (put in once: a reload boots again in the same process)
 for index = #(config.luaPath or {}), 1, -1 do
@@ -65,26 +69,10 @@ end
 
 -- Atlases: the server writes their info once; SetAtlas and C_Texture.GetAtlasInfo read it
 local atlases = readKeptJson(config.atlasFile) or {}
--- The flavour's atlas variant (config.atlasVariant, false for none; Forever's "-c60" when the config does not say)
-local atlasVariant = config.atlasVariant
-if atlasVariant == nil then
-    atlasVariant = "-c60"
-end
-atlasVariant = atlasVariant and tostring(atlasVariant):lower() or nil
-local atlasVariantEnd = atlasVariant and (atlasVariant:gsub("%p", "%%%0") .. "$")
+-- (keyed by the elements' names, as the client looks atlases up; the flavour's "-c60" art already chosen for each, and
+-- a high-resolution member already at the size it is drawn: src/server/assets/atlases.ts)
 function W.getAtlasInfo(name)
-    -- The client picks an atlas's high-resolution member ("...-2x") when asked for the plain name
     local key = name and tostring(name):lower()
-    -- WoW Forever's client (Camelot) answers a plain name with its own "-c60" variant where it has one, and does
-    -- not know the "-c60" names themselves: the game's code asks for "common-stat-bar-BG", never "...-c60"
-    if key and atlasVariant and key:find(atlasVariantEnd) then
-        return nil
-    end
-    -- (its "-c60" variant may exist only in high resolution, "...-c60-2x", as the frames' metal edges do: sized by the
-    -- modern atlas but drawn with the -c60 art, an edge left a see-through strip under the title)
-    if key and atlasVariant and (atlases[key .. atlasVariant] or atlases[key .. atlasVariant .. "-2x"]) then
-        key = key .. atlasVariant
-    end
     local atlas, sizeFactor = key and atlases[key], 1
     if key and not atlas and atlases[key .. "-2x"] then
         atlas, sizeFactor = atlases[key .. "-2x"], 0.5 -- twice the pixels for the same size on screen
@@ -917,10 +905,9 @@ addons.savedRoot = config.savedDir or (root .. "/saved")
 addons.gameTypes, addons.family, addons.game =
     config.gameTypes or { "mainline", "camelot" }, config.family or "Mainline", config.game or "Camelot"
 addons.clientInterface = tonumber(config.interface) or 16001
-addons.discover(
-    config.addonsRoot or (root .. "/addons"),
-    config.tocSuffixes or { "_Forever", "_Camelot", "_Mainline", "" }
-)
+if config.addonsRoot then
+    addons.discover(config.addonsRoot, config.tocSuffixes or { "_Forever", "_Camelot", "_Mainline", "" })
+end
 -- The settings' further folders with addons (addonFolders), each one addon itself or a folder of them: an addon in one
 -- wins over one of the same name in the AddOns folder, a later folder over an earlier (src/server/addonSources.ts)
 for _, folder in ipairs(config.addonFolders or {}) do
@@ -969,11 +956,16 @@ if config.interfaceRoot then
         end
         -- The secure environment's addons first ("## UseSecureEnvironment: 1"): they define frame types and tables the
         -- rest is built with (Blizzard_AuraContainer's <AuraContainer>, which the target frame's XML uses though
-        -- nothing lists it as a dependency); then by name
-        local isSecureEnvironment = {}
+        -- nothing lists it as a dependency); then those the client loads first ("## LoadFirst: 1" for this game type:
+        -- Blizzard_EnvironmentCleanup brings in Blizzard_FrameXML, and with it the panel manager's RegisterUIPanel,
+        -- before Blizzard_Settings_Shared calls it as it loads); then by name
+        local isSecureEnvironment, isLoadFirst = {}, {}
         for _, addon in ipairs(addons.list) do
             if tostring(addon.metadata.usesecureenvironment or ""):match("^%s*1") then
                 isSecureEnvironment[addon.name] = true
+            end
+            if tostring(addon.metadata.loadfirst or ""):match("^%s*1") then
+                isLoadFirst[addon.name] = true
             end
         end
         -- (those, for the optional dependencies one of them names: lua/addons.lua loads only these first)
@@ -984,6 +976,9 @@ if config.interfaceRoot then
         table.sort(blizzardNames, function(first, second)
             if (isSecureEnvironment[first] or false) ~= (isSecureEnvironment[second] or false) then
                 return isSecureEnvironment[first] == true
+            end
+            if (isLoadFirst[first] or false) ~= (isLoadFirst[second] or false) then
+                return isLoadFirst[first] == true
             end
             return first < second
         end)
@@ -1189,6 +1184,12 @@ sim.fireEvent("PLAYER_LOGIN")
 sim.fireEvent("SETTINGS_LOADED")
 -- The account's Edit Mode layouts: the game's Edit Mode places its frames from them
 sim.fireEvent("EDIT_MODE_LAYOUTS_UPDATED", sim.G.C_EditMode.GetLayouts(), false)
+-- The client takes its display and UI scale as the interface comes up, after the layout is applied: frames that place
+-- themselves by the screen look again then (the action bar's end caps, which ask whether they fit beside the bar while
+-- Edit Mode still holds the bottom bars at the screen's top left, and wait a frame for them on these events: without
+-- them the left one stayed hidden on a screen it fits. Inferred from that code, not measured: the recorder can tell)
+sim.fireEvent("DISPLAY_SIZE_CHANGED")
+sim.fireEvent("UI_SCALE_CHANGED")
 -- The account's chat windows (GetChatWindowInfo): the chat frames load their names, colours and docking from them
 sim.fireEvent("UPDATE_CHAT_WINDOWS")
 sim.fireEvent("UPDATE_FLOATING_CHAT_WINDOWS")
@@ -1212,22 +1213,9 @@ collectgarbage("setpause", 200)
 -- Requests
 local handlers = {}
 
-function handlers.scene(request)
-    if request.since and request.since == sim.version then
-        return { version = sim.version, unchanged = true, errors = #sim.errors, chat = #sim.chat }
-    end
-    return {
-        version = sim.version,
-        items = scene.export(),
-        errors = #sim.errors,
-        chat = #sim.chat,
-        width = sim.screenWidth,
-        height = sim.screenHeight,
-    }
-end
-
 -- The scene as a stream (stream.lua): a tick when the clock moves (dt), then what changed in the scene since the
--- last frame, written straight as JSON text (host.lua sends a { raw = text } answer as it is)
+-- last frame as a binary frame (the native walk: lua/scenesync.lua), behind a header written straight as JSON text
+-- (host.lua sends a { raw = text, bin = bytes } answer as it is)
 local stream = require("stream")
 local scenesync = require("scenesync")
 local function streamHeader(parts)
@@ -1271,26 +1259,12 @@ function handlers.frame(request)
         sim.tick(math.min(request.dt, 0.5))
     end
     local ticked = clock()
-    local changes = {}
-    local isChanged = false
     local exported = ticked
     local binary
-    if request.scene ~= false and stream.getVersion() ~= sim.version and request.binary and scenesync.isAvailable() then
-        -- (the native walk: the scene walked in Rust, only what it asks for made here; lua/scenesync.lua)
+    if request.scene ~= false and stream.getVersion() ~= sim.version then
+        -- (the native walk: the scene walked in Rust, only what it asks for made here)
         binary = scenesync.frame()
-        isChanged = binary ~= nil
         exported = clock()
-        stream.setVersion(sim.version)
-    elseif request.scene ~= false and stream.getVersion() ~= sim.version then
-        local items = scene.export()
-        exported = clock()
-        -- (binary frames when the server takes them and the native store is built: lua/stream.lua)
-        if request.binary and stream.isBinaryAvailable() then
-            binary = stream.encodeBinary(items)
-            isChanged = binary ~= nil
-        else
-            isChanged = stream.encodeChanges(items, changes)
-        end
         stream.setVersion(sim.version)
     end
     local ended = clock()
@@ -1320,11 +1294,6 @@ function handlers.frame(request)
     end
     if binary then
         parts[#parts + 1] = ',"delta":true,"bin":' .. #binary
-    elseif isChanged then
-        parts[#parts + 1] = ',"delta":true,'
-        for _, part in ipairs(changes) do
-            parts[#parts + 1] = part
-        end
     end
     parts[#parts + 1] = "}"
     return { raw = table.concat(parts), bin = binary }
@@ -1377,8 +1346,8 @@ function handlers.perf()
         },
         -- (the native walk's frames: its parts' time and the regions kept, moved and made, each a frame)
         walk = (function()
-            local walk = scenesync.isAvailable() and scenesync.takeTimes()
-            if not walk or walk.frames == 0 then
+            local walk = scenesync.takeTimes()
+            if walk.frames == 0 then
                 return nil
             end
             local frames = walk.frames
@@ -1398,41 +1367,16 @@ function handlers.perf()
 end
 
 -- The whole scene the stream stands at, for a page that joins it (the frames after are changes to this)
-local isBinaryStream = false -- (the server takes binary frames: a JSON whole scene is then made anew)
-function handlers.sceneWhole(request)
-    local parts = {}
-    if request.binary and stream.isBinaryAvailable() then
-        isBinaryStream = true
-        if stream.getVersion() == nil then
-            if scenesync.isAvailable() then
-                scenesync.frame()
-            else
-                stream.encodeBinary(scene.export())
-            end
-            stream.setVersion(sim.version)
-        end
-        local whole = stream.encodeWholeBinary()
-        streamHeader(parts)
-        parts[#parts + 1] = ',"whole":true,"bin":' .. #whole .. "}"
-        return { raw = table.concat(parts), bin = whole }
-    end
-    if isBinaryStream then
-        -- (the old poll, or a tool, beside binary pages: the stream keeps no JSON copies, so the scene as it is)
-        streamHeader(parts)
-        parts[#parts + 1] = ',"whole":true,"items":'
-        json.encodeInto(scene.export(), parts)
-        parts[#parts + 1] = "}"
-        return { raw = table.concat(parts) }
-    end
+function handlers.sceneWhole()
     if stream.getVersion() == nil then
-        stream.encodeChanges(scene.export(), {})
+        scenesync.frame()
         stream.setVersion(sim.version)
     end
+    local whole = stream.encodeWholeBinary()
+    local parts = {}
     streamHeader(parts)
-    parts[#parts + 1] = ',"whole":true,'
-    stream.encodeWhole(parts)
-    parts[#parts + 1] = "}"
-    return { raw = table.concat(parts) }
+    parts[#parts + 1] = ',"whole":true,"bin":' .. #whole .. "}"
+    return { raw = table.concat(parts), bin = whole }
 end
 
 function handlers.input(request)

@@ -1,4 +1,4 @@
---@addons QuestieDB, SimFixture
+--@addons SimQuestieDB, SimFixture
 -- Running away (lua/combat.lua, the Combat panel's Run away): a level 14 rogue pulls two quilboar, then runs;
 -- she turns her back on them and auto-runs, they chase (as fast as she runs, so they do not catch her), each gives up (EVADE)
 -- once it is its leash from where she pulled it, and she is out of combat (PLAYER_REGEN_ENABLED) with the run over.

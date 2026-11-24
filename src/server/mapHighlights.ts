@@ -69,23 +69,50 @@ const buildMask = (fileId: number, data: Uint8Array): MapHighlight | null => {
   return { fileId, width, height, columns, rows, mask: new TextDecoder().decode(bits) };
 };
 
-export const buildMapHighlights = async (art: ArtSource): Promise<MapHighlights | null> => {
+/**
+ * @param onProgress told as each map's file comes: how many came, of how many (the setup shows it)
+ */
+export const buildMapHighlights = async (
+  art: ArtSource,
+  onProgress?: (done: number, total: number) => void,
+): Promise<MapHighlights | null> => {
   const artRows = await art.getDb2Rows("UiMapArt");
   const links = await art.getDb2Rows("UiMapXMapArt");
   if (!artRows || !links) return null;
   const highlightByArt = new Map(artRows.map((row) => [row.ID ?? "", Number(row.HighlightFileDataID) || 0]));
-  const result: MapHighlights = { _complete: true };
+  // Every map's highlight files, in the links' order (a map whose first file gives no mask takes its next, as when
+  // they were read one after another)
+  const jobs: { uiMapId: string; fileId: number }[] = [];
+  const seen = new Set<string>();
   for (const row of links) {
     const fileId = highlightByArt.get(row.UiMapArtID ?? "") ?? 0;
     const uiMapId = row.UiMapID ?? "";
-    if (!fileId || uiMapId in result) continue;
-    const data = await art.raw(fileId);
+    const key = `${uiMapId}:${fileId}`;
+    if (!fileId || seen.has(key)) continue;
+    seen.add(key);
+    jobs.push({ uiMapId, fileId });
+  }
+  // Fetched side by side (the downloads' own limit keeps it to a few at once), put together in their order
+  let done = 0;
+  onProgress?.(0, jobs.length);
+  const files = await Promise.all(
+    jobs.map(async (job) => {
+      const data = await art.raw(job.fileId);
+      done += 1;
+      onProgress?.(done, jobs.length);
+      return data;
+    }),
+  );
+  const result: MapHighlights = { _complete: true };
+  for (const [index, job] of jobs.entries()) {
+    if (job.uiMapId in result) continue;
+    const data = files[index];
     if (!data) {
       result._complete = false;
       continue;
     }
-    const mask = buildMask(fileId, data);
-    if (mask) result[uiMapId] = mask;
+    const mask = buildMask(job.fileId, data);
+    if (mask) result[job.uiMapId] = mask;
   }
   return result;
 };

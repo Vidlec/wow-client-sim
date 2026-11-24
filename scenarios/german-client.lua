@@ -1,5 +1,5 @@
 --@locale deDE
---@addons QuestieDB, SimFixture
+--@addons SimQuestieDB, SimFixture
 -- A German client: the game's strings, map names and objective wording come from the game's German tables, and
 -- everything (the world map, an addon's window) opens without errors.
 setProfile({ level = 30, race = "Scourge", class = "MAGE" })

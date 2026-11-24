@@ -282,6 +282,20 @@ local function setPoint(self, point, relative, relativePoint, x, y)
     touchLayoutOf(self)
 end
 
+---Every frame below it moved by as many levels (its own level is the caller's), as the client moves them
+function W.shiftChildLevels(frame, delta)
+    if delta == 0 then
+        return
+    end
+    for _, child in ipairs(S(frame).children or {}) do
+        local childState = S(child)
+        if childState and childState.isFrame then
+            childState.level = math.max(0, (childState.level or 0) + delta)
+            W.shiftChildLevels(child, delta)
+        end
+    end
+end
+
 ---Keeps the children drawn at their parent's level (useParentLevel) at it, and theirs.
 function W.liftChildren(frame)
     local s = S(frame)
@@ -1024,7 +1038,12 @@ local regionMethods = {
             local list = s.isFrame and S(parent).children or S(parent).regions
             list[#list + 1] = self
             if s.isFrame and not s.levelSet then
-                s.level = (S(parent).level or 0) + 1
+                -- (its children move with it, keeping their places above it: a frame built from a pool, its parts at
+                -- level 1, then given to a list at 102 has them above it at 104, as the spellbook's spells over its
+                -- page)
+                local level = (S(parent).level or 0) + 1
+                W.shiftChildLevels(self, level - (s.level or 0))
+                s.level = level
             end
             if s.isFrame then
                 W.liftChildren(parent)
@@ -2187,18 +2206,7 @@ local frameMethods = {
         if delta == 0 and s.levelSet and s.level == level then
             return
         end
-        if delta ~= 0 then
-            local function shift(frame)
-                for _, child in ipairs(S(frame).children or {}) do
-                    local childState = S(child)
-                    if childState and childState.isFrame then
-                        childState.level = math.max(0, (childState.level or 0) + delta)
-                        shift(child)
-                    end
-                end
-            end
-            shift(self)
-        end
+        W.shiftChildLevels(self, delta)
         s.level, s.levelSet = level, true
         -- Children stay above their parent, as in the game
         W.liftChildren(self)

@@ -40,9 +40,10 @@ function forShard(list) end
 
 -- ## The character and the world
 
----Changes the character: level, race ("Scourge", "NightElf"...), class ("MAGE"...), name, money, sex, and the rest of
+---Changes the character: level, race ("Scourge", "NightElf"...), class ("MAGE"...), name, money, sex, experience
+---(xp, xpMax), rested experience (restedXp: GetXPExhaustion and GetRestState, UPDATE_EXHAUSTION), and the rest of
 ---game.profile. A scenario's first lines may log in as one instead: --@login race=Orc,class=WARRIOR,level=12.
----@param changes { level: number?, race: string?, class: string?, name: string?, money: number?, legacyRenown: number? }
+---@param changes { level: number?, race: string?, class: string?, name: string?, money: number?, xp: number?, xpMax: number?, restedXp: number?, legacyRenown: number? }
 function setProfile(changes) end
 
 ---Puts the character on a map (a UiMap id) at x, y (0 to 1, as the map's coordinates).

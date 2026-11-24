@@ -1,4 +1,4 @@
---@addons QuestieDB
+--@addons SimQuestieDB
 --@login race=Orc,class=WARRIOR,level=12
 -- The quest giver's windows as the client opens them, and the sounds that come with them: talking opens the gossip
 -- window (placed by the game's panel manager), a quest chosen there opens the quest window (QUEST_DETAIL), Accept takes

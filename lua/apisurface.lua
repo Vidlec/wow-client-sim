@@ -113,23 +113,27 @@ end
 ---Stands in for every function the client has and the simulator does not simulate yet: called, it returns nothing and
 ---is noted (the Errors tab's "Pretended to exist"). For the whole interface, whose code calls many of them as it loads.
 ---@return number count Stand-ins added
+---A stand-in for a function the client has, known only by its name (the recorder's dump, or wowless with no
+---description of it): called, it returns nothing, or 0 for a count, and is noted
+function apisurface.makeBareStandIn(fullName)
+    -- A count or a limit ("GetNumLanguages", "GetMaxBattlefieldID") is a number in the client, never nothing:
+    -- none here, so 0 (the game's loops count up to it)
+    local functionName = fullName:match("([%w_]+)$") or fullName
+    -- A health is a number too (C_PetBattles.GetHealth, formatted with %d by the pet battle frames as they load)
+    local isCount = functionName:match("GetNum%u")
+        or functionName:match("^GetMax%u")
+        or functionName:match("^Get%w*Health$")
+    return sim.markStandIn(function()
+        sim.noteStub(fullName .. " (the client has it; not simulated yet)")
+        if isCount then
+            return 0
+        end
+    end)
+end
+
 function apisurface.addClientStandIns(api)
     local count = 0
-    local function makeStandIn(fullName)
-        -- A count or a limit ("GetNumLanguages", "GetMaxBattlefieldID") is a number in the client, never nothing:
-        -- none here, so 0 (the game's loops count up to it)
-        local functionName = fullName:match("([%w_]+)$") or fullName
-        -- A health is a number too (C_PetBattles.GetHealth, formatted with %d by the pet battle frames as they load)
-        local isCount = functionName:match("GetNum%u")
-            or functionName:match("^GetMax%u")
-            or functionName:match("^Get%w*Health$")
-        return sim.markStandIn(function()
-            sim.noteStub(fullName .. " (the client has it; not simulated yet)")
-            if isCount then
-                return 0
-            end
-        end)
-    end
+    local makeStandIn = apisurface.makeBareStandIn
     for _, name in ipairs(api.globals or {}) do
         if rawget(G, name) == nil then
             rawset(G, name, makeStandIn(name))

@@ -10,6 +10,8 @@ import type { Project } from "../project/config.ts";
 import { listAddonSourcesCached } from "../server/addonSources.ts";
 import { Assets } from "../server/assets/index.ts";
 import { CACHE_DIR, type Config } from "../server/config.ts";
+import { findFlavour } from "../server/flavours/index.ts";
+import { loadSettings } from "../server/settings.ts";
 import { findChrome, type PictureOutcome, takePicture } from "./chrome.ts";
 import page from "./shotPage/index.html";
 import type { Scene, ShotOptions, ShotResult } from "./types.ts";
@@ -32,7 +34,12 @@ export class Shooter {
     readonly project: Project,
     readonly config: Config,
   ) {
-    this.#art = new Assets(CACHE_DIR, { build: config.build, locale: config.locale ?? "enUS" });
+    // (the game's files from Blizzard's CDN, for the settings' flavour)
+    this.#art = new Assets(CACHE_DIR, {
+      build: config.build,
+      locale: config.locale ?? "enUS",
+      product: findFlavour(loadSettings().flavour).product,
+    });
   }
 
   /** The folder an addon's files are read from for /media: wherever the addon is (addonSources.ts) */
@@ -45,7 +52,6 @@ export class Shooter {
   #serve(): ReturnType<typeof Bun.serve> {
     if (this.#server) return this.#server;
     const art = this.#art;
-    const variant = this.config.atlasVariant ? this.config.atlasVariant.toLowerCase() : null;
     this.#atlasesLoaded ??= art.loadAtlases();
     this.#server = Bun.serve({
       hostname: "127.0.0.1",
@@ -58,13 +64,10 @@ export class Shooter {
           const image = await art.image(/^\d+$/.test(target) ? Number(target) : target);
           return image ? bytes(image.data, image.contentType) : Response.json({ error: "unknown" }, { status: 404 });
         },
-        // As the client resolves a name (the same rule as the server's /atlas)
+        // By the element's name, as the client looks it up (as the server's /atlas)
         "/atlas": async (request) => {
           await this.#atlasesLoaded;
-          const name = (new URL(request.url).searchParams.get("n") ?? "").toLowerCase();
-          if (!variant) return Response.json(art.atlas(name) ?? {});
-          if (name.endsWith(variant)) return Response.json({});
-          return Response.json(art.atlas(`${name}${variant}`) ?? art.atlas(name) ?? {});
+          return Response.json(art.atlas(new URL(request.url).searchParams.get("n") ?? "") ?? {});
         },
         "/font": async (request) => {
           const font = await art.font(new URL(request.url).searchParams.get("p") ?? "");

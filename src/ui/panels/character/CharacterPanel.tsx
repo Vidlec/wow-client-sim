@@ -56,6 +56,7 @@ const CharacterCard = ({ profile, onEdit }: { profile: Profile; onEdit: () => vo
           <Label className="text-[11px] text-muted">Experience</Label>
           <Meter.Output className="text-[11px] text-muted">
             {(profile.xp ?? 0).toLocaleString()} / {profile.xpMax.toLocaleString()}
+            {profile.restedXp ? ` · ${profile.restedXp.toLocaleString()} rested` : ""}
           </Meter.Output>
           <Meter.Track>
             <Meter.Fill />

@@ -17,8 +17,8 @@ const runFrame = async (host: LuaHost, stream: SceneStream, elapsedSeconds: numb
     if (result.reload) await host.start();
     return;
   }
-  // (binary frames when the simulator's native store is built; else it answers in JSON as before: lua/stream.lua)
-  const request: Record<string, unknown> & { op: string } = { op: "frame", binary: true };
+  // (what changed in the scene comes as a binary frame after the header: lua/stream.lua)
+  const request: Record<string, unknown> & { op: string } = { op: "frame" };
   const inputs = stream.takeInputs();
   if (inputs.length > 0) request.inputs = inputs;
   if (!host.isPaused) request.dt = elapsedSeconds * host.speed;

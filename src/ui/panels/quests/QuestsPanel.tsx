@@ -7,6 +7,8 @@ import { GiverFinder } from "./GiverFinder.tsx";
 import { QuestFinder } from "./QuestFinder.tsx";
 import { QuestLog } from "./QuestLog.tsx";
 
+// (each tab's panel stays mounted, keeping what was typed in it; React Aria marks the others inert and leaves hiding
+// them to the page: data-[inert=true]:hidden)
 export const QuestsPanel = () => {
   const [tab, setTab] = useState("log");
   const logCount = useSimState((state) => state.questLog.length, 0);
@@ -32,14 +34,14 @@ export const QuestsPanel = () => {
           </Tabs.Tab>
         </Tabs.List>
       </Tabs.ListContainer>
-      <Tabs.Panel id="log" className="pt-3" shouldForceMount>
+      <Tabs.Panel id="log" className="pt-3 data-[inert=true]:hidden" shouldForceMount>
         <p className="mb-2 text-xs text-muted">{doneCount} done before, besides these</p>
         <QuestLog onFind={() => setTab("find")} />
       </Tabs.Panel>
-      <Tabs.Panel id="find" className="pt-3" shouldForceMount>
+      <Tabs.Panel id="find" className="pt-3 data-[inert=true]:hidden" shouldForceMount>
         <QuestFinder />
       </Tabs.Panel>
-      <Tabs.Panel id="givers" className="pt-3" shouldForceMount>
+      <Tabs.Panel id="givers" className="pt-3 data-[inert=true]:hidden" shouldForceMount>
         <GiverFinder />
       </Tabs.Panel>
     </Tabs>

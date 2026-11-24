@@ -1,13 +1,29 @@
 // The game screen in the page: the engine mounted in a div, fitted again whenever its room changes, told the page's
 // choices (zoom, the world's backdrop, the inspector), and its socket's news passed to the store (a new run,
-// a new error or chat line: the state is read again at once)
+// a new error or chat line: the state is read again at once), and a note over it while the game's art is on its way
+import { Spinner } from "@heroui/react";
 import { useEffect, useRef } from "react";
 import type { StreamStatus } from "../engine/types.ts";
 import { useSimState } from "../sim/hooks.ts";
 import { getPrefs, usePref } from "../sim/prefs.ts";
 import { refreshState } from "../sim/store.ts";
 import { createGameScreen } from "./engine.ts";
-import { setGameScreen, setStreamHealth, useGameScreen } from "./screen.ts";
+import { setGameScreen, setStreamHealth, useDrawStats, useGameScreen } from "./screen.ts";
+
+/** Over the game's top left while pictures, atlases or fonts are still coming (the first start fetches them) */
+const ArtLoading = () => {
+  const artLoading = useDrawStats()?.artLoading ?? 0;
+  return (
+    <div role="status" aria-live="polite" className="pointer-events-none absolute top-3 left-3 z-10">
+      {artLoading > 0 && (
+        <span className="art-loading flex items-center gap-2 rounded-full px-3 py-1.5 text-xs">
+          <Spinner size="sm" />
+          Loading the game's art · {artLoading} left
+        </span>
+      )}
+    </div>
+  );
+};
 
 const isNews = (before: StreamStatus | null, now: StreamStatus): boolean =>
   !before ||
@@ -55,5 +71,10 @@ export const GameView = () => {
     [screen, inspectOn, inspectHeld, inspectDrawnOnly],
   );
 
-  return <div ref={container} className="game-view relative min-h-0 min-w-0 flex-1 overflow-hidden bg-[#07080a]" />;
+  return (
+    <>
+      <div ref={container} className="game-view relative min-h-0 min-w-0 flex-1 overflow-hidden bg-[#07080a]" />
+      <ArtLoading />
+    </>
+  );
 };

@@ -2,9 +2,9 @@
 // stream (stream.ts, scene.ts), and the mouse, keyboard and controller sent back (input.ts, gamepad.ts). The page's
 // shell gives it an empty element and talks to it through GameScreen (types.ts) alone.
 import "./engine.css";
-import { onAtlasArrived } from "./atlas.ts";
+import { countAtlasesLoading, onAtlasArrived } from "./atlas.ts";
 import { createAudioPlayer } from "./audio.ts";
-import { loadFonts, onFontArrived } from "./fonts.ts";
+import { countFontsLoading, loadFonts, onFontArrived } from "./fonts.ts";
 import { startGamepad } from "./gamepad.ts";
 import { attachInput } from "./input.ts";
 import { createInspector } from "./inspect.ts";
@@ -190,8 +190,8 @@ export const createGameScreen = (container: HTMLElement, options: GameScreenOpti
   showCursor(undefined);
   const onFrame = (frame: SceneFrame): void => {
     pageStats.received += 1;
-    // (every frame of the stream carries the pointer; the poll's "nothing newer" answer does not)
-    if (frame.version !== undefined && !frame.unchanged) showCursor(frame.cursor);
+    // (every frame of the stream carries the pointer)
+    if (frame.version !== undefined) showCursor(frame.cursor);
     let isChanged = false;
     const error = frame.error ?? null;
     if (error !== status.error) {
@@ -206,7 +206,7 @@ export const createGameScreen = (container: HTMLElement, options: GameScreenOpti
     if (frame.width && frame.height && layout.setSize(frame.width, frame.height)) fit();
     if (scene.apply(frame)) requestDraw();
     if (frame.sounds) audio.apply(frame.sounds);
-    if (frame.version !== undefined && !frame.unchanged && frame.version !== status.version) {
+    if (frame.version !== undefined && frame.version !== status.version) {
       status.version = frame.version;
       isChanged = true;
     }
@@ -285,7 +285,8 @@ export const createGameScreen = (container: HTMLElement, options: GameScreenOpti
     const drawsPerSecond = (pageStats.drawn - drawnBefore) / Math.max(0.001, (now - measuredAt) / 1000);
     drawnBefore = pageStats.drawn;
     measuredAt = now;
-    tell(drawStatsListeners, { drawsPerSecond, hasGpu: gpu !== null, drawMs: pageStats.drawMs });
+    const artLoading = (gpu?.countLoading() ?? 0) + countAtlasesLoading() + countFontsLoading();
+    tell(drawStatsListeners, { drawsPerSecond, hasGpu: gpu !== null, drawMs: pageStats.drawMs, artLoading });
   }, DRAW_STATS_MS);
   window.addonSimStats = () => ({
     ...pageStats,

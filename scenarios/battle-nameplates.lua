@@ -1,4 +1,4 @@
---@addons QuestieDB, SimFixture
+--@addons SimQuestieDB, SimFixture
 -- What a nameplate addon sees of a fight (lua/combat.lua): plates come as creatures come in range (with the setting
 -- on), go as they leave it or die; their units answer health, level, rank and side; UNIT_HEALTH tells of every blow,
 -- once for each unit token the creature has (a frame registered for one unit hears only it); Tab cycles the

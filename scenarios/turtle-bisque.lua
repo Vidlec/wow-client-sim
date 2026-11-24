@@ -1,6 +1,6 @@
 -- Soothing Turtle Bisque (Horde, 7321), start to finish: picked up from Christoph Jeffcoat in Tarren Mill,
--- 10 Turtle Meat from Snapjaws, Soothing Spices bought from him, handed back to him. The quests come from QuestieDB.
---@addons QuestieDB, SimFixture
+-- 10 Turtle Meat from Snapjaws, Soothing Spices bought from him, handed back to him. The quests come from the quest database (SimQuestieDB).
+--@addons SimQuestieDB, SimFixture
 local QUEST, GIVER, SNAPJAW, MEAT, SPICES = 7321, 2393, 2408, 3712, 3713 -- luacheck: ignore 211 (the quest's items, both named)
 
 local function getObjective(index)

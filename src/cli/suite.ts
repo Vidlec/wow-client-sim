@@ -23,6 +23,7 @@ import type { Failure, PlayOptions, RunResult, SuiteResult } from "../project/re
 import { Assets } from "../server/assets/index.ts";
 import { CACHE_DIR, type Config, loadConfig, ROOT, readJsonFile } from "../server/config.ts";
 import { findLuajit } from "../server/luajit.ts";
+import { requireNativeCore } from "../server/nativeCore.ts";
 import { writeRuntimeConfig } from "../server/runtimeConfig.ts";
 import { loadSettings } from "../server/settings.ts";
 import { coverageFolder, coveragePaths, writeReport } from "./coverage.ts";
@@ -247,6 +248,7 @@ const readResult = (project: Project, job: Job, output: string, code: number, se
 /** Plays a project's scenarios (or those named), side by side; every run's result, the longest first in the order run */
 export const playScenarios = async (options: PlayOptions): Promise<SuiteResult> => {
   const { project } = options;
+  await requireNativeCore(); // (built first when it is missing or older than its sources)
   const config = loadConfig();
   // LuaJIT as the server finds it: the settings' own, else the PATH's or one in a known place
   const luajit = findLuajit(loadSettings().luajitPath) ?? "luajit";

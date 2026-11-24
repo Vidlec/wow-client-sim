@@ -1,38 +1,45 @@
-// A class picked by its colour: a row of discs in the classes' colours, the chosen one ringed, its name under them
-import { findClass, useFlavour } from "../flavours/index.ts";
+// A class picked from a grid: each class with the game's own icon (Interface\Icons\ClassIcon_<Class>) and its name in
+// its colour, the chosen one outlined and tinted in that colour
+import { useFlavour } from "../flavours/index.ts";
 
 type Props = { value: string; onChange: (classFile: string) => void; label?: string };
 
+/** The game's icon of a class: "MAGE" -> ClassIcon_Mage (the game's paths are read in any case) */
+const getClassIconUrl = (classFile: string): string =>
+  `/art?p=${encodeURIComponent(`Interface/Icons/ClassIcon_${classFile.charAt(0)}${classFile.slice(1).toLowerCase()}`)}`;
+
 export const ClassPicker = ({ value, onChange, label = "Class" }: Props) => {
   const flavour = useFlavour();
-  const chosen = findClass(flavour, value);
   return (
-    <fieldset className="flex flex-col gap-2">
+    <fieldset className="flex flex-col">
       <legend className="mb-2 text-sm font-medium">{label}</legend>
-      <div className="flex flex-wrap justify-between gap-1">
+      <div className="grid grid-cols-3 gap-1.5">
         {flavour.classes.map((entry) => {
           const isChosen = entry.file === value;
           return (
             <button
               key={entry.file}
               type="button"
-              aria-label={entry.name}
               aria-pressed={isChosen}
-              title={entry.name}
               onClick={() => onChange(entry.file)}
-              className="size-7 cursor-pointer rounded-full transition-transform hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="flex cursor-pointer items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-[13px] font-medium transition-colors hover:bg-default focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               style={{
-                background: `radial-gradient(circle at 35% 30%, #fff6, ${entry.color} 55%)`,
-                opacity: isChosen ? 1 : 0.45,
-                boxShadow: isChosen ? `0 0 0 2px #13161a, 0 0 0 4px ${entry.color}, 0 0 14px ${entry.color}88` : "none",
+                color: entry.color,
+                borderColor: isChosen ? entry.color : "var(--separator)",
+                background: isChosen ? `color-mix(in oklab, ${entry.color} 14%, transparent)` : undefined,
               }}
-            />
+            >
+              <img
+                src={getClassIconUrl(entry.file)}
+                alt=""
+                className="size-6 shrink-0 rounded-[5px]"
+                style={{ opacity: isChosen ? 1 : 0.7 }}
+              />
+              <span className="truncate">{entry.name}</span>
+            </button>
           );
         })}
       </div>
-      <span className="text-[13px] font-medium" style={{ color: chosen.color }}>
-        {chosen.name}
-      </span>
     </fieldset>
   );
 };

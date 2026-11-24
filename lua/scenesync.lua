@@ -6,9 +6,10 @@
 -- the whole scene depends on (the frame under the mouse, the one pressed, the focus, the font objects, the screen) and
 -- the animations playing. The native side lays the objects out itself (native/src/layout.rs, asking this side to
 -- measure texts), walks the scene and decides each region's fate (kept, moved, made again); for those made again
--- lua/scene.lua's own builders make the items, packed (lua/pack.lua) and handed back. ADDONSIM_NATIVE_WALK=0 keeps the
--- export in Lua (lua/stream.lua's binary path).
+-- lua/scene.lua's own builders make the items, packed (lua/pack.lua) and handed back. It is the only way the scene
+-- reaches the page: without the native core the simulator does not start (lua/native.lua).
 local ffi = require("ffi")
+local native = require("native")
 local sim = require("sim")
 local W = require("widgets")
 
@@ -70,7 +71,7 @@ local POINTS = {
 }
 local EFFECT_ANY, EFFECT_TRANSFORM, EFFECT_ALPHA = 1, 2, 4
 
-local library, handle
+local library, handle = native.load(), native.handle()
 local record
 local points, pointsCapacity = nil, 0
 local dirty = {}
@@ -82,17 +83,6 @@ local lengthOut = ffi.new("size_t[1]")
 local countsOut = ffi.new("uint32_t[4]")
 local rectOut = ffi.new("double[4]")
 local measure -- (the callback the native layout measures texts with: kept alive here)
-
----Whether the native walk makes the scene (the native core is built, and not turned off)
-function scenesync.isAvailable()
-    if os.getenv("ADDONSIM_NATIVE_WALK") == "0" then
-        return false
-    end
-    local native = require("native")
-    library = library or native.load()
-    handle = handle or native.handle()
-    return handle ~= nil
-end
 
 local function idOf(object)
     local s = object and S[object]

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { SetupFlow } from "../panels/setup/SetupFlow.tsx";
 import { useStoreStatus } from "../sim/hooks.ts";
 import { usePref } from "../sim/prefs.ts";
+import { useSetupWanted } from "../sim/setup.ts";
 import { startPolling } from "../sim/store.ts";
 import { useIsFullscreen } from "./fullscreen.ts";
 import { GameView } from "./GameView.tsx";
@@ -49,6 +50,13 @@ export const App = () => {
   useEffect(() => {
     if (problem?.setupNeeded) setInSetup(true);
   }, [problem?.setupNeeded]);
+  // (asked for by a reset in the settings: a fresh setup, walked through again)
+  const setupWanted = useSetupWanted();
+  useEffect(() => {
+    if (!setupWanted.isWanted) return;
+    setInSetup(true);
+    setupWanted.take();
+  }, [setupWanted]);
   return (
     <>
       {isInSetup || problem?.setupNeeded ? <SetupFlow onEnter={() => setInSetup(false)} /> : <Shell />}

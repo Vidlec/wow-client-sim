@@ -3,7 +3,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { findAtlas } from "./atlases.ts";
+import { buildAtlases, findAtlas } from "./atlases.ts";
 import { decodeBlp } from "./blp.ts";
 import { parseCsv } from "./csv.ts";
 import { convertImage } from "./image.ts";
@@ -196,5 +196,53 @@ describe("atlas lookup", () => {
     const copy = findAtlas(atlases, "frame");
     copy?.slice?.fill(0);
     expect(element.slice).toEqual([8, 4, 8, 4]);
+  });
+});
+
+describe("atlases by element", () => {
+  // One 1024x1024 texture; members of three elements, named as Forever's tables name them
+  const textures = [{ ID: "9", FileDataID: "777", AtlasWidth: "1024", AtlasHeight: "1024" }];
+  const member = (id: string, name: string, element: string, width: number) => ({
+    ID: id,
+    CommittedName: name,
+    UiTextureAtlasID: "9",
+    UiTextureAtlasElementID: element,
+    Width: String(width),
+    Height: String(width / 2),
+    CommittedLeft: "0",
+    CommittedRight: String(width),
+    CommittedTop: "0",
+    CommittedBottom: String(width / 2),
+    CommittedFlags: "0",
+  });
+  const elements = [
+    { ID: "1", Name: "common-stat-bar-BG" },
+    { ID: "2", Name: "ui-swingtimerbar-background" },
+    { ID: "3", Name: "spellbook-Page-Right-C60" },
+  ];
+  const members = [
+    member("10", "common-stat-bar-BG", "1", 60),
+    member("11", "common-stat-bar-BG-c60", "1", 68),
+    member("12", "common-stat-bar-BG-c60-2x", "1", 136),
+    member("20", "ui-swingtimerbar-background-2x-c60", "2", 422),
+    member("30", "spellbook-Page-Right-C60", "3", 810),
+  ];
+  const atlases = buildAtlases(textures, members, [], elements, "-c60");
+
+  test("an element draws its -c60 member at normal resolution", () => {
+    expect(atlases["common-stat-bar-bg"]?.width).toBe(68);
+  });
+
+  test("an element with only a high-resolution member draws it at half size", () => {
+    expect(atlases["ui-swingtimerbar-background"]?.width).toBe(211);
+  });
+
+  test("an element may carry -C60 in its own name", () => {
+    expect(atlases["spellbook-page-right-c60"]?.width).toBe(810);
+  });
+
+  test("a member's own name is no name to ask by, as in the game", () => {
+    expect(atlases["common-stat-bar-bg-c60"]).toBeUndefined();
+    expect(atlases["ui-swingtimerbar-background-2x-c60"]).toBeUndefined();
   });
 });

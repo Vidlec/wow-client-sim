@@ -14,3 +14,6 @@ scenarios/.coverage
 scenarios/.timings.json
 .impeccable
 .claude
+
+# (this machine's Docker Compose settings)
+.env

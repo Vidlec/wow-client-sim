@@ -21,8 +21,7 @@ const createPage = (buffered = 0): PageSocket & { sent: string[] } => {
 const createHost = (generation = 1): LuaHost =>
   ({
     generation,
-    requestRaw: async () => '{"version":9,"whole":true}',
-    // (a JSON answer: no binary part, as without the native store)
+    // (only the header: the binary scene after it is the native store's, read by the page)
     requestWithBinary: async () => ({ text: '{"version":9,"whole":true}' }),
   }) as unknown as LuaHost;
 

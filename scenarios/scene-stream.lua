@@ -1,9 +1,10 @@
--- The scene stream (lua/stream.lua): a page that puts the scene together from the frames it is sent (a whole scene,
--- then only what changed) holds exactly what a whole export gives, every frame; with the mouse moving, the world map
--- opening and closing, an addon's window (the fixture's), and a page joining midway. Also: the layout kept between frames is the one
--- worked out afresh (the rectangles cached per object, thrown away only for what a change moves).
-local json = require("json")
+-- The scene stream (lua/stream.lua, lua/scenesync.lua): the native walk's store, which holds what a page holds after
+-- the frames it was sent (a whole scene, then only what changed), is exactly what a whole export gives, every frame;
+-- with the mouse moving, the world map opening and closing, an addon's window (the fixture's), and a page joining
+-- midway. Also: the layout kept between frames is the one worked out afresh (the rectangles cached per object, thrown
+-- away only for what a change moves).
 local scene = require("scene")
+local scenesync = require("scenesync")
 local stream = require("stream")
 local W = require("widgets")
 local sim = require("sim")
@@ -12,81 +13,18 @@ setProfile({ level = 30, race = "Scourge", class = "MAGE" })
 moveTo(1413, 0.52, 0.30) -- The Barrens
 wait(0.5)
 
-local held, order = {}, {}
-local function apply(frame)
-    if frame.whole then
-        held, order = {}, {}
-        for index, item in ipairs(frame.items) do
-            local key = item.k .. item.i
-            held[key], order[index] = item, key
-        end
-    elseif frame.delta then
-        for _, item in ipairs(frame.u or {}) do
-            held[item.k .. item.i] = item
-        end
-        if frame.o then
-            order = frame.o
-        end
+---A frame as the server's clock makes one: the walk's changes since the last
+local function writeFrame()
+    if stream.getVersion() ~= sim.version then
+        scenesync.frame()
+        stream.setVersion(sim.version)
     end
-end
-local function writeFrame(isWhole)
-    local parts = {}
-    if isWhole then
-        stream.encodeWhole(parts)
-        return json.decode('{"whole":true,' .. table.concat(parts) .. "}")
-    end
-    if stream.getVersion() == sim.version then
-        return {}
-    end
-    local isChanged = stream.encodeChanges(scene.export(), parts)
-    stream.setVersion(sim.version)
-    if not isChanged then
-        return {}
-    end
-    return json.decode('{"delta":true,' .. table.concat(parts) .. "}")
-end
-local function canonical(value)
-    if type(value) ~= "table" then
-        return tostring(value)
-    end
-    local keys = {}
-    for key in pairs(value) do
-        keys[#keys + 1] = tostring(key)
-    end
-    table.sort(keys)
-    local parts = {}
-    for _, key in ipairs(keys) do
-        local inner = value[key]
-        if inner == nil then
-            inner = value[tonumber(key)]
-        end
-        parts[#parts + 1] = key .. "=" .. canonical(inner)
-    end
-    return "{" .. table.concat(parts, ",") .. "}"
 end
 local checked = 0
 local function check(label)
-    local expected = json.decode(json.encode(scene.export()))
-    local isSame = #order == #expected
-    local firstDifference
-    for index = 1, math.min(#order, #expected) do
-        if canonical(held[order[index]]) ~= canonical(expected[index]) then
-            isSame, firstDifference = false, index
-            break
-        end
-    end
+    local problem = scene.findWalkDifference(scene.export())
     checked = checked + 1
-    expect(
-        isSame,
-        label
-            .. ": the page's scene is the export's ("
-            .. #order
-            .. " vs "
-            .. #expected
-            .. " items"
-            .. (firstDifference and ", first difference at " .. firstDifference or "")
-            .. ")"
-    )
+    expect(problem == nil, label .. ": the page's scene is the export's" .. (problem and " (" .. problem .. ")" or ""))
 end
 -- Every shown frame's rectangle, as kept, against the same worked out with nothing kept
 local function checkLayout(label)
@@ -122,7 +60,7 @@ local function frames(label, count, area)
         local y = area[2] + (index * 23) % area[4]
         hover({ x, y })
         sim.tick(1 / 60)
-        apply(writeFrame(false))
+        writeFrame()
         if index % 8 == 0 then
             check(label .. " frame " .. index)
         end
@@ -131,15 +69,13 @@ local function frames(label, count, area)
 end
 
 stream.setVersion(nil)
-writeFrame(false)
-apply(writeFrame(true))
+writeFrame()
 check("first whole scene")
 frames("world", 40, { 300, 200, 700, 300 })
 key("M")
 wait(0.3)
 frames("world map", 60, { 100, 150, 600, 450 })
-apply(writeFrame(true)) -- a page joining midway
-check("joined midway")
+check("joined midway") -- (a page joining midway: the store's whole scene)
 frames("world map, after joining", 24, { 100, 150, 600, 450 })
 key("M")
 wait(0.3)

@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CACHE_DIR } from "../config.ts";
 import { decodeBlp, getBlpEncoding, getBlpInfo } from "./blp.ts";
-import { cascUrl, download, NotFoundError } from "./download.ts";
+
 import { FONT_MAGICS } from "./fonts.ts";
 import { Assets, DEFAULT_BUILD } from "./index.ts";
 import { encodePng, getPngSize } from "./png.ts";
@@ -127,15 +127,10 @@ describe.skipIf(!hasArt)("real BLP", () => {
   });
 });
 
-// A file not in the build is remembered as such: only testable when that is known or wago.tools can say so
+// A file not in the build is remembered as such: only tested when the cache knows it (asking Blizzard's CDN would
+// first fetch the build's indexes, a few hundred MB)
 const missingPath = join(CACHE_DIR, "casc", DEFAULT_BUILD, `${MISSING_FDID}.missing`);
-const canTellMissing =
-  isReady &&
-  (existsSync(missingPath) ||
-    (await download(cascUrl(MISSING_FDID, DEFAULT_BUILD)).then(
-      () => false,
-      (error: unknown) => error instanceof NotFoundError,
-    )));
+const canTellMissing = isReady && existsSync(missingPath);
 
 describe.skipIf(!canTellMissing)("missing files", () => {
   test("a missing file is remembered", async () => {

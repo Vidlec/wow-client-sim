@@ -21,3 +21,6 @@ api-report.txt
 config.json
 .impeccable/
 tools/bin/
+
+# Docker Compose settings of this machine (ADDONSIM_FOLDER: what the container may browse; compose.yaml)
+.env

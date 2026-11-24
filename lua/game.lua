@@ -22,6 +22,8 @@ game.profile = {
     money = 123456,
     xp = 1000,
     xpMax = 20000,
+    -- Rested experience (GetXPExhaustion): kills give twice the experience until it is used up; 0 for none
+    restedXp = 0,
     uiMapId = 1421,
     x = 0.45,
     y = 0.45,
@@ -94,6 +96,14 @@ function game.setProfile(changes)
     if changes and (changes.race or changes.sex) and sim.fireEvent then
         sim.fireEvent("UNIT_PORTRAIT_UPDATE", "player")
         sim.fireEvent("PORTRAITS_UPDATED")
+    end
+    -- Other experience, or other rested experience: the experience bar and addons that follow them hear it as the
+    -- client tells them
+    if changes and (changes.xp or changes.xpMax) and sim.fireEvent then
+        sim.fireEvent("PLAYER_XP_UPDATE", "player")
+    end
+    if changes and changes.restedXp ~= nil and sim.fireEvent then
+        sim.fireEvent("UPDATE_EXHAUSTION")
     end
     -- Another level: the unit frames show it (the player frame's number). Not a level gained in play ("real" false)
     if changes and changes.level and changes.level ~= oldLevel and sim.fireEvent then
@@ -1737,7 +1747,18 @@ function game.install()
             return profile.xpMax
         end
     G.GetXPExhaustion = function()
-        return nil
+        local rested = tonumber(profile.restedXp) or 0
+        return rested > 0 and rested or nil
+    end
+    -- The rest state: 1 rested (twice the experience from kills), 2 normal; its name and multiplier as the client gives
+    -- them. The experience bar takes its fill from it (Blizzard_StatusTrackingBar's ExpBar: without it the bar kept
+    -- the plain grey status bar texture)
+    G.GetRestState = function()
+        local exhaustion = G.GetXPExhaustion()
+        if exhaustion and exhaustion > 0 then
+            return 1, "Rested", 2
+        end
+        return 2, "Normal", 1
     end
     G.UnitInParty = function()
         return false

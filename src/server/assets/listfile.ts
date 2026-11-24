@@ -53,6 +53,8 @@ export class Listfile {
   /** Wakes waitReady callers when a build ends, well or not */
   private readonly listeners = new Set<() => void>();
   error: string | null = null;
+  /** While it builds: how much of the list has come, and the paths indexed so far */
+  progress: { downloadedBytes: number; rows: number } | null = null;
 
   constructor(cacheDir: string) {
     this.path = join(cacheDir, "listfile.sqlite");
@@ -103,6 +105,14 @@ export class Listfile {
     return this.lookupQuery.all(full, stem);
   }
 
+  /** Lets go of the index's file (before the cache is deleted: an open file cannot be on Windows) */
+  close(): void {
+    this.lookupQuery?.finalize();
+    this.lookupQuery = null;
+    this.connection?.close();
+    this.connection = null;
+  }
+
   private getConnection(): Database {
     this.connection ??= new Database(this.path, { readonly: true });
     return this.connection;
@@ -113,6 +123,7 @@ export class Listfile {
     if (this.error && Date.now() - this.failedAt < RETRY_SECONDS * 1000) return;
     this.building = this.build().finally(() => {
       this.building = null;
+      this.progress = null;
       for (const listener of [...this.listeners]) listener();
     });
   }
@@ -140,6 +151,7 @@ export class Listfile {
       let rowCount = 0;
       let downloadedBytes = 0;
       let pending = ""; // the start of a line whose end is in the next chunk
+      this.progress = { downloadedBytes: 0, rows: 0 };
       const decoder = new TextDecoder("utf-8"); // invalid bytes become U+FFFD, as Python's "replace"
       const addLine = (line: string): void => {
         const separator = line.indexOf(";");
@@ -155,9 +167,11 @@ export class Listfile {
         insertBatch(batch);
         rowCount += batch.length;
         batch = [];
+        if (this.progress) this.progress.rows = rowCount;
       };
       await streamUrl(LISTFILE_URL, IDLE_TIMEOUT_MS, (chunk) => {
         downloadedBytes += chunk.length;
+        if (this.progress) this.progress.downloadedBytes = downloadedBytes;
         const lines = (pending + decoder.decode(chunk, { stream: true })).split("\n");
         pending = lines.pop() ?? "";
         for (const line of lines) addLine(line);

@@ -8,6 +8,10 @@
 #   ADDONSIM_FOLDER=/path/to/games docker compose up --build            (macOS, Linux)
 #   $env:ADDONSIM_FOLDER = "R:\"; docker compose up --build               (Windows PowerShell)
 #
+# To browse the whole disk (the game in /Applications, addons anywhere), put ADDONSIM_FOLDER=/ in a .env file beside
+# this one (git-ignored; Compose reads it): OrbStack and Linux mount / as it is; Docker Desktop on a Mac mounts only
+# what its Settings > Resources > File sharing lists, so share / there first; on Windows name a drive ("C:\").
+#
 # The page is served to this machine only (127.0.0.1): it can list the folders mounted. docs/docker.md has the rest.
 services:
   addonsim:

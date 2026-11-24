@@ -1,0 +1,7 @@
+## Interface: 16001
+## Title: SimQuestieDB
+## Notes: A stand-in for QuestieDB in the simulator's own scenarios: only the quests, creatures and items they use (Data.lua, recorded from QuestieDB), behind a LibQuestieDB of the same shape, so they need no addon from outside.
+## Version: 1.0
+
+Data.lua
+SimQuestieDB.lua

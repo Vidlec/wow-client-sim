@@ -138,8 +138,15 @@ local function parseTocContent(content, gameTypes)
                     value = value:gsub("%s*%[[^%]]*%]", "")
                     metadata[key] = metadata[key] and (metadata[key] .. "," .. value) or value
                 end
-            elseif not (key == "allowloadgametype" or key == "excludeloadgametype") or not metadata[key] then
+            elseif key == "allowloadgametype" or key == "excludeloadgametype" then
+                metadata[key] = metadata[key] or value
+            elseif not value:find("[AllowLoad", 1, true) and not value:find("[ExcludeLoadGameType", 1, true) then
                 metadata[key] = value
+            elseif isLoadAllowed(value, gameTypes) then
+                -- "## LoadFirst: 1 [AllowLoadGameType classic]", "## AllowLoad: both [AllowLoadGameType mainline]":
+                -- a line for another client is not this one's; this one's is kept without its condition
+                metadata[key] =
+                    trim((value:gsub("%s*%[AllowLoad[^%]]*%]", ""):gsub("%s*%[ExcludeLoadGameType[^%]]*%]", "")))
             end
         elseif not line:match("^%s*#") and line:match("%S") and isLoadAllowed(line, gameTypes) then
             -- Path variables are filled in as this client fills them; load conditions were checked above
@@ -174,12 +181,16 @@ local function parseTocContent(content, gameTypes)
     return metadata, files
 end
 
+-- (raised when parseTocContent reads a TOC differently: the TOCs kept in the boot cache are read again. 2: the load
+-- conditions of every metadata line, LoadFirst's among them)
+local TOC_READING = 2
+
 ---A TOC as this client reads it: its metadata and files, kept between runs while the file is unchanged (bootcache;
 ---QuestieDB's baked TOC is 19 MB).
 local function parseToc(path, gameTypes)
     local variant = table.concat(gameTypes, ",") .. "-" .. tostring(addons.family) .. "-" .. tostring(addons.game)
     local parsed = require("bootcache").rememberFile(
-        "toc-" .. (path:match("([^/\\]+)$") or "toc") .. "-" .. variant,
+        "toc" .. TOC_READING .. "-" .. (path:match("([^/\\]+)$") or "toc") .. "-" .. variant,
         path,
         function()
             return readFile(path) or ""

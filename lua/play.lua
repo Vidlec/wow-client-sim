@@ -484,7 +484,7 @@ end
 ---@return number count Moments played
 function steps.replay(source, options)
     options = options or {}
-    if not source then
+    if not source and sim.config.addonsRoot then
         source = sim.findNewestFile(
             (sim.config.addonsRoot or "") .. "/../../WTF/Account",
             "SavedVariables",

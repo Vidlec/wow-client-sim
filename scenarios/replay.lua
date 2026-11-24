@@ -1,6 +1,6 @@
 -- Playing back a session recorded in the game (here a sample in the recorder's shape): the character, the
 -- quest it accepted, the fight and the loot that count for its drop objective, its count, and where it walked.
---@addons QuestieDB, SimFixture
+--@addons SimQuestieDB, SimFixture
 local count = replay(scenariosDir .. "/fixtures/sample-recording.lua")
 expect(count == 10, "every recorded moment played")
 expect(G.C_QuestLog.GetLogIndexForQuestID(844) ~= nil, "the recorded quest is in the log")

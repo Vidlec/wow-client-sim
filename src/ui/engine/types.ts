@@ -20,7 +20,13 @@ export type StreamStatus = {
 
 /** How the page keeps up drawing (the server's own clock is in the state's perf); hasGpu: drawing with WebGPU
  * (false: not yet, or the browser has none) */
-export type DrawStats = { drawsPerSecond: number; hasGpu: boolean; drawMs: number };
+export type DrawStats = {
+  drawsPerSecond: number;
+  hasGpu: boolean;
+  drawMs: number;
+  /** The game's art still on its way: pictures, atlases and fonts asked for (the first start fetches them) */
+  artLoading: number;
+};
 
 /** A frame under the mouse, as the inspector lists it (the server's /api/inspect) */
 export type InspectedFrame = {

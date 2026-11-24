@@ -10,9 +10,12 @@ releases: build the image from a checkout.
 docker compose up --build
 ```
 
-Then open http://localhost:8765/ and finish the setup in the page: choose your AddOns folder with **Browse…** (the
-page's own folder browser; it points out AddOns folders and the game's install), and download the game's interface
-source with its button. The first start fetches the game's art and tables (a few minutes), then the simulator starts.
+Then open http://localhost:8765/ and finish the setup in the page: download the game's interface source with its
+button, and, if you like, choose your AddOns folder with **Browse…** (the page's own folder browser; it points out
+AddOns folders and the game's install). The AddOns folder is optional: the game runs without it, and the Addons tab
+takes it later. The first start fetches the game's art and tables, and the setup shows each part of it as it goes
+(the game's file list, wowless's API data, the tables, the atlases, the map's highlights, the boot); Settings shows
+what the cache holds of them afterwards.
 
 A container sees only the host folders given to it. `compose.yaml` gives it your home folder, read-only, at `/host`:
 that is where the browser starts, and where the setup looks for the game's install by itself. When the game (or your
@@ -22,6 +25,13 @@ addons) is somewhere else, name that folder instead:
 ADDONSIM_FOLDER=/path/to/games docker compose up --build          (macOS, Linux)
 $env:ADDONSIM_FOLDER = "R:\"; docker compose up --build             (Windows PowerShell)
 ```
+
+To browse the whole disk (the game in /Applications, addon folders anywhere), put the setting in a `.env` file beside
+`compose.yaml` (git-ignored; Compose reads it each time): `ADDONSIM_FOLDER=/`. OrbStack and Linux mount `/` as it
+is, and the setup then finds the game in `/host/Applications/World of Warcraft` by itself. Docker Desktop on a Mac
+mounts only the folders its Settings > Resources > File sharing lists: share `/` there first. On Windows name a drive
+(`ADDONSIM_FOLDER=C:\`). The setup's addons step and the Addons tab take as many further addon folders as you like,
+each chosen in the same browser.
 
 Without Compose, the same by hand:
 

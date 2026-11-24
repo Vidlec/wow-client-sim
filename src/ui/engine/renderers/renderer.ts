@@ -52,6 +52,8 @@ export type Renderer = {
   blink: () => void;
   /** No picture asked for is still on its way */
   isSettled: () => boolean;
+  /** How many pictures asked for are still on their way */
+  countLoading: () => number;
   /** Settles once the GPU has drawn what it was sent */
   finished: () => Promise<void>;
   /** Called once if the GPU is lost: a renderer is made again on a new canvas */
@@ -65,6 +67,9 @@ const FULL = [0, 1, 0, 1] as const;
 const FULL_WHITE = [1, 1, 1, 1] as const;
 const TEXT_KEEP_FRAMES = 600;
 const TEXT_SWEEP_FRAMES = 300;
+/** A texture that did not come (the game's art still being fetched, a CDN busy) is asked again this often */
+const TEXTURE_RETRY_MS = 30_000;
+const TEXTURE_TRIES = 3;
 
 type TextureEntry = {
   state: "loading" | "ready" | "failed";
@@ -73,6 +78,9 @@ type TextureEntry = {
   height: number;
   /** The decoded picture, which text with icons draws from */
   bitmap: ImageBitmap | null;
+  /** How many times it was asked for, and when it last failed (performance.now()) */
+  tries?: number;
+  failedAt?: number;
 };
 type ReadyTexture = TextureEntry & { texture: GpuTexture };
 
@@ -171,6 +179,7 @@ const createRendererOn = (canvas: HTMLCanvasElement, backend: Backend, onArtArri
       entry.state = "ready";
     } catch {
       entry.state = "failed";
+      entry.failedAt = performance.now();
     } finally {
       loading -= 1;
     }
@@ -181,8 +190,17 @@ const createRendererOn = (canvas: HTMLCanvasElement, backend: Backend, onArtArri
     if (!url) return null;
     let entry = textures.get(url);
     if (!entry) {
-      entry = { state: "loading", texture: null, width: 0, height: 0, bitmap: null };
+      entry = { state: "loading", texture: null, width: 0, height: 0, bitmap: null, tries: 1 };
       textures.set(url, entry);
+      void loadTexture(url, entry);
+    } else if (
+      entry.state === "failed" &&
+      (entry.tries ?? 1) < TEXTURE_TRIES &&
+      performance.now() - (entry.failedAt ?? 0) > TEXTURE_RETRY_MS
+    ) {
+      // (asked again: it may have come meanwhile)
+      entry.state = "loading";
+      entry.tries = (entry.tries ?? 1) + 1;
       void loadTexture(url, entry);
     }
     return entry.state === "ready" ? (entry as ReadyTexture) : null;
@@ -1467,6 +1485,7 @@ const createRendererOn = (canvas: HTMLCanvasElement, backend: Backend, onArtArri
       isCursorOn = !isCursorOn;
     },
     isSettled: () => loading === 0,
+    countLoading: () => loading,
     finished: () => backend.finished(),
     onLost: backend.onLost,
     dispose: () => {

@@ -10,6 +10,7 @@ import { loginText, projectRuntime } from "../project/load.ts";
 import { Assets } from "../server/assets/index.ts";
 import { CACHE_DIR, type Config, loadConfig } from "../server/config.ts";
 import { findLuajit } from "../server/luajit.ts";
+import { requireNativeCore } from "../server/nativeCore.ts";
 import { writeRuntimeConfig } from "../server/runtimeConfig.ts";
 import { loadSettings } from "../server/settings.ts";
 
@@ -67,6 +68,7 @@ export class RuntimeMaker {
 
   /** The runtime of a game: its own saved-variables folder (fresh, temporary), the spec's addons and interface */
   async make(spec: GameSpec): Promise<{ runtime: Runtime; savedDir: string }> {
+    await requireNativeCore(); // (built first when it is missing or older than its sources)
     const runtime: Runtime = { ...(await this.#base(spec.locale)) };
     if (spec.addons) runtime.addons = spec.addons;
     if (spec.interface === "light") delete runtime.blizzardAddons;

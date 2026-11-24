@@ -861,6 +861,13 @@ function api.install(config)
         return object
     end
     sim.secureOnlyFunctions.GetForbiddenObjectTable = true
+    -- Spectating: the game's Escape handler asks (Blizzard_Game/Mainline/Game.lua) though neither the client's
+    -- documentation nor wowless lists it yet: a player never spectates here
+    G.C_SpectatingUI = G.C_SpectatingUI or {}
+    G.C_SpectatingUI.IsSpectating = G.C_SpectatingUI.IsSpectating
+        or sim.markStandIn(function()
+            return false
+        end)
     -- A game rule as a frame strata: the world map's is HIGH, so it opens over unit frames and bars (it asks as it
     -- shows; with "UNKNOWN" it kept MEDIUM, under EllesmereUI's player frame); the rest are not set
     G.C_GameRules = G.C_GameRules or {}

@@ -30,6 +30,8 @@ export type Config = {
   fps?: number;
   /** The atlas variant the client swaps in for a plain name ("-c60"); false for none (left out, Lua takes "-c60") */
   atlasVariant: string | false;
+  /** The client has the keyring (C_ActionBar.ShouldShowKeyring) */
+  hasKeyring?: boolean;
   [key: string]: unknown;
 };
 
@@ -67,6 +69,7 @@ export const resolveConfig = (settings: StoredSettings): Config => {
     game: flavour.game,
     interfaceTocSuffixes: flavour.interfaceTocSuffixes,
     wowlessProduct: flavour.wowlessProduct,
+    hasKeyring: flavour.hasKeyring,
     ...rest,
     flavour: flavour.id,
     build,

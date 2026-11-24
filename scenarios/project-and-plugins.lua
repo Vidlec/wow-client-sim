@@ -1,4 +1,4 @@
---@addons QuestieDB, SimFixture
+--@addons SimQuestieDB, SimFixture
 -- A project as the simulator runs it (the self-test project, src/project/select.ts): its own addon found in its own
 -- folder, its saved variables kept across a reload, its Lua module folder ahead of the simulator's, its plugin's party
 -- addon and step (lua/plugins.lua). Also the party's addons: a member runs none unless one is named, and the

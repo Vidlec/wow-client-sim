@@ -38,3 +38,18 @@ body {
 #root {
   height: 100%;
 }
+
+/* The browser's own surfaces in the page's palette: text selection, the caret, and thin scrollbars on the dark
+   surfaces (the side panels, the setup) */
+::selection {
+  background: color-mix(in oklab, var(--accent) 38%, transparent);
+  color: var(--foreground);
+}
+input,
+textarea {
+  caret-color: var(--accent);
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}

@@ -1033,7 +1033,7 @@ local isChecking = os.getenv("ADDONSIM_CHECK_SCENE") == "1"
 -- What an object's items are made from, in two parts: its shape (its state, size, scale, alpha, where its clip and
 -- masks lie from it...) and its place (the boxes the items carry: its own, its clip's, its masks'). The same shape in
 -- another place is a move: the kept items are given their new boxes, not made again (a dragged window's every item
--- moves at every step), and the stream sends only those (scene.moveCounts).
+-- moves at every step; the native walk decides moves itself, lua/scenesync.lua).
 local stamp, stampCount = {}, 0
 local place, placeCount = {}, 0
 local placeMasks, placeMaskCount = {}, 0 -- (the masks' rectangles, in the order the items list them)
@@ -1078,9 +1078,6 @@ local function putRelative(box, rect)
         put(box ~= nil)
     end
 end
--- [item] = how many times its boxes were given anew in place (a move): the stream sends a move when this changed
-scene.moveCounts = setmetatable({}, { __mode = "k" })
-local moveCounts = scene.moveCounts
 ---Whether the object's kept items stand as they are ("kept"), stand somewhere else ("moved"), or not (false)
 local function compareKept(kept, canMove)
     if not kept then
@@ -1162,7 +1159,6 @@ local function moveKept(kept)
                 end
             end
         end
-        moveCounts[item] = (moveCounts[item] or 0) + 1
     end
 end
 ---A region's stamp: false when its items are made every time (animated, a bar on a timer, a line); else true, and
@@ -2402,11 +2398,10 @@ local function isClose(a, b)
     end
     return true
 end
-local function checkNative(made)
+---How the scene the native walk made (walked now, read back from its store) differs from items made anew here, or nil
+---when it does not: for ADDONSIM_CHECK_SCENE=1 and the scene-stream scenario
+function scene.findWalkDifference(made)
     local scenesync = require("scenesync")
-    if not scenesync.isAvailable() then
-        return
-    end
     scenesync.frame()
     local walked = require("unpack").whole(require("stream").encodeWholeBinary())
     local problem = scenesync.checkLayout()
@@ -2453,6 +2448,10 @@ local function checkNative(made)
             break
         end
     end
+    return problem
+end
+local function checkNative(made)
+    local problem = scene.findWalkDifference(made)
     if problem then
         local key = problem:gsub("%d+%.?%d*", "#")
         if not reportedKeys[key] then

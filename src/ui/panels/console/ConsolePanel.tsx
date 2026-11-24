@@ -25,10 +25,10 @@ export const ConsolePanel = () => {
           </Tabs.Tab>
         </Tabs.List>
       </Tabs.ListContainer>
-      <Tabs.Panel id="lua" className="pt-3" shouldForceMount>
+      <Tabs.Panel id="lua" className="pt-3 data-[inert=true]:hidden" shouldForceMount>
         <LuaConsole />
       </Tabs.Panel>
-      <Tabs.Panel id="chat" className="pt-3" shouldForceMount>
+      <Tabs.Panel id="chat" className="pt-3 data-[inert=true]:hidden" shouldForceMount>
         <ChatLog />
       </Tabs.Panel>
     </Tabs>

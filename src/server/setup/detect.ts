@@ -3,7 +3,7 @@
 // Only folders are looked at, by name: nothing is read but a few small files (a checkout's version.txt and HEAD).
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import type { DetectedFolder, FolderCheck, FolderKind } from "../../shared/setup.ts";
 import { readToc } from "../addonCatalog.ts";
 import { FLAVOURS, type Flavour } from "../flavours/index.ts";
@@ -24,6 +24,8 @@ const DRIVE_FOLDERS = [
   "Blizzard\\World of Warcraft",
   "Battle.net\\World of Warcraft",
   "Program Files (x86)\\Battle.net\\World of Warcraft",
+  // (a Mac's disk mounted whole into the container: its Applications folder)
+  "Applications\\World of Warcraft",
 ];
 
 const isFolder = (path: string): boolean => {
@@ -225,6 +227,11 @@ export const checkFolder = (kind: FolderKind, path: string, flavour: Flavour): F
   }
   const count = countAddons(typed, flavour.tocSuffixes);
   if (count > 0) return { path: typed, isValid: true, message: plural(count, "addon") };
+  // (a folder that is one addon: its own TOC, an addon worked on outside the game)
+  const name = basename(resolve(typed));
+  if (readToc(typed, name, flavour.tocSuffixes) !== null) {
+    return { path: typed, isValid: true, message: `One addon: ${name}` };
+  }
   for (const inside of [
     join(typed, "AddOns"),
     join(typed, "Interface", "AddOns"),

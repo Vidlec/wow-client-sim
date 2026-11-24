@@ -1,7 +1,19 @@
-// Changing who the character is: name, level, race (by faction), class (by colour) and money (in gold, silver and
-// copper), applied at once as the game would see a new character's
+// Changing who the character is: name, level, race (by faction), class (by colour), money (in gold, silver and
+// copper) and rested experience, applied at once as the game would see a new character's
 import { PersonPencil } from "@gravity-ui/icons";
-import { Button, Header, Input, Label, ListBox, Modal, NumberField, Select, TextField, toast } from "@heroui/react";
+import {
+  Button,
+  Description,
+  Header,
+  Input,
+  Label,
+  ListBox,
+  Modal,
+  NumberField,
+  Select,
+  TextField,
+  toast,
+} from "@heroui/react";
 import { useState } from "react";
 import { Problem } from "../../components/bits.tsx";
 import { ClassPicker } from "../../components/ClassPicker.tsx";
@@ -49,6 +61,7 @@ export const ProfileModal = ({ profile, isOpen, onClose }: Props) => {
   const [gold, setGold] = useState(money.gold);
   const [silver, setSilver] = useState(money.silver);
   const [copper, setCopper] = useState(money.copper);
+  const [restedXp, setRestedXp] = useState(profile.restedXp ?? 0);
 
   const apply = async (): Promise<void> => {
     const answer = await action.run({
@@ -59,6 +72,7 @@ export const ProfileModal = ({ profile, isOpen, onClose }: Props) => {
         race,
         class: classFile,
         money: gold * 10000 + silver * 100 + copper,
+        restedXp,
       },
     });
     if (answer && !answer.problem) {
@@ -85,7 +99,7 @@ export const ProfileModal = ({ profile, isOpen, onClose }: Props) => {
             <Modal.Heading>The character</Modal.Heading>
           </Modal.Header>
           <Modal.Body className="flex flex-col gap-4">
-            <div className="grid grid-cols-[1fr_7rem] gap-3">
+            <div className="grid grid-cols-[1fr_9rem] gap-3">
               <TextField value={name} onChange={setName}>
                 <Label>Name</Label>
                 <Input autoFocus />
@@ -99,7 +113,7 @@ export const ProfileModal = ({ profile, isOpen, onClose }: Props) => {
                 <Label>Level</Label>
                 <NumberField.Group>
                   <NumberField.DecrementButton />
-                  <NumberField.Input />
+                  <NumberField.Input className="min-w-0 text-center tabular-nums" />
                   <NumberField.IncrementButton />
                 </NumberField.Group>
               </NumberField>
@@ -144,6 +158,19 @@ export const ProfileModal = ({ profile, isOpen, onClose }: Props) => {
                 color={flavour.colors.money.copper}
               />
             </div>
+            <NumberField
+              minValue={0}
+              value={restedXp}
+              onChange={(next) => setRestedXp(Number.isFinite(next) ? Math.max(0, Math.floor(next)) : 0)}
+            >
+              <Label>Rested experience</Label>
+              <NumberField.Group>
+                <NumberField.Input />
+              </NumberField.Group>
+              <Description>
+                Kills give twice the experience until it is used up; addons read it (GetXPExhaustion)
+              </Description>
+            </NumberField>
             <Problem>{action.problem}</Problem>
           </Modal.Body>
           <Modal.Footer>

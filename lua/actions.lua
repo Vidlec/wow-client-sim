@@ -239,11 +239,15 @@ function actions.install(G, game)
         "HasPetActionPetBarIndices",
         "ShouldOverrideBarShowHealthBar",
         "ShouldOverrideBarShowManaBar",
-        "ShouldShowKeyring",
     }) do
         bar[name] = function()
             return false
         end
+    end
+    -- The flavour's (the server's config.hasKeyring): the bag bar shows the keyring's button, and measures itself with
+    -- it either way (a hidden one left a gap left of the reagent bag)
+    bar.ShouldShowKeyring = function()
+        return sim.config ~= nil and sim.config.hasKeyring == true
     end
     bar.IsAttackAction = function(slot)
         local action = get(slot)

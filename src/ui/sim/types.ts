@@ -26,6 +26,8 @@ export type Profile = {
   money: number;
   xp?: number;
   xpMax?: number;
+  /** Rested experience (GetXPExhaustion): kills give twice the experience until it is used up */
+  restedXp?: number;
   uiMapId: number;
   x: number;
   y: number;

@@ -16,13 +16,21 @@ import { isFont } from "./fonts.ts";
 import { Listfile, type ListfileRow } from "./listfile.ts";
 import { AddonMedia } from "./media.ts";
 import { getExtensionRank, splitExtension, splitPath } from "./paths.ts";
+import { type TactProgress, TactStore } from "./tact.ts";
 import { TextureStore } from "./textures.ts";
 import type { AssetsStatus, AtlasInfo, Served } from "./types.ts";
 
 /** The default flavour's build (a store is normally made for the settings' build) */
 export const DEFAULT_BUILD: string = DEFAULT_FLAVOUR.wagoBuild;
 
-export type AssetsOptions = { build: string; locale?: string };
+export type AssetsOptions = {
+  build: string;
+  locale?: string;
+  /** Blizzard's product code ("wowf"), for its CDN, where the game's files come from (the default flavour's) */
+  product?: string;
+  /** The flavour's atlas variant ("-c60"), whose members stand for their elements; false for none (the default flavour's) */
+  atlasVariant?: string | false;
+};
 
 /** The listfile row a path means: an exact match of name and extension, else the best extension of the name */
 const chooseListfileRow = (rows: ListfileRow[], full: string, stem: string, extension: string): number | null => {
@@ -52,6 +60,9 @@ export class Assets {
   private readonly listfile: Listfile;
   private readonly failures = new FailureMemory();
   private readonly casc: CascStore;
+  /** Blizzard's CDN, for this build's files */
+  private readonly tact: TactStore;
+  private readonly atlasVariant: string | null;
   private readonly textures: TextureStore;
   private readonly db2: Db2Store;
   private readonly addonMedia = new AddonMedia();
@@ -70,7 +81,14 @@ export class Assets {
     for (const folder of [cascFolder, pngFolder, db2Folder]) mkdirSync(folder, { recursive: true });
     this.listfile = new Listfile(this.cacheDir);
     this.listfilePath = this.listfile.path;
-    this.casc = new CascStore(cascFolder, this.build, this.failures);
+    this.atlasVariant = (options.atlasVariant ?? DEFAULT_FLAVOUR.atlasVariant ?? false) || null;
+    // (the game's files from Blizzard's CDN; its indexes are made ready the first time one is needed: prepareFiles)
+    this.tact = new TactStore(
+      join(this.cacheDir, "tact", this.build),
+      this.build,
+      options.product ?? DEFAULT_FLAVOUR.product,
+    );
+    this.casc = new CascStore(cascFolder, this.failures, this.tact);
     this.textures = new TextureStore(pngFolder, this.casc, this.failures);
     this.db2 = new Db2Store(db2Folder, this.build, this.locale, this.failures);
   }
@@ -82,9 +100,25 @@ export class Assets {
     return this.listfile.isReady();
   }
 
+  /** Lets go of the files it holds open (the listfile's index), before the cache is deleted */
+  close(): void {
+    this.listfile.close();
+    this.tact.close();
+  }
+
+  /** Blizzard's CDN made ready for this build: its indexes fetched and built once (a few hundred MB), then opened */
+  prepareFiles(onProgress?: TactProgress): Promise<void> {
+    return this.tact.prepare(onProgress);
+  }
+
   /** Waits for the listfile index (or the timeout, or a failed build); true when it is ready */
   waitReady(timeoutMs: number): Promise<boolean> {
     return this.listfile.waitReady(timeoutMs);
+  }
+
+  /** The file list while it builds (how much has come, paths indexed); null when it is not building */
+  getListfileProgress(): { downloadedBytes: number; rows: number } | null {
+    return this.listfile.progress;
   }
 
   /** Diagnostics: readiness, listfile row count and build time, last error */
@@ -172,7 +206,9 @@ export class Assets {
       const members = await this.getDb2Rows("UiTextureAtlasMember");
       if (!textures || !members) return null;
       const slices = (await this.getDb2Rows("UiTextureAtlasElementSliceData")) ?? [];
-      this.atlases = buildAtlases(textures, members, slices);
+      // (by the elements' names, as the client looks them up; the flavour's "-c60" members standing for them)
+      const elements = (await this.getDb2Rows("UiTextureAtlasElement")) ?? [];
+      this.atlases = buildAtlases(textures, members, slices, elements, this.atlasVariant);
       return this.atlases;
     });
   }

@@ -141,6 +141,13 @@ export const loadFonts = (): Promise<void> => {
   return loading;
 };
 
+/** How many fonts asked for are still on their way */
+export const countFontsLoading = (): number => {
+  let count = 0;
+  for (const state of requested.values()) if (state === "loading") count++;
+  return count;
+};
+
 /** No font asked for is still on its way (the picture pages wait for it: picture.ts) */
 export const areFontsSettled = (): boolean => {
   for (const state of requested.values()) if (state === "loading") return false;

@@ -33,7 +33,8 @@ export class TextureStore {
       let converted: Served;
       try {
         converted = convertImage(raw);
-      } catch {
+      } catch (error) {
+        process.stderr.write(`texture ${fdid}: ${error instanceof Error ? error.message : String(error)}\n`);
         this.failures.add(key); // not an image we read (or a broken one): asked again after a while
         return null;
       }

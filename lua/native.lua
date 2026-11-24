@@ -1,8 +1,7 @@
--- AddonSim's native core (native/, Rust), loaded through LuaJIT's FFI when it has been built (`bun run native`, or
--- cargo build --release in native/). One handle (native.handle) holds the scene stream's item store, which keeps
--- what the page holds and writes binary frames (lua/stream.lua), and the scene's walk with its mirror of the widgets
--- (lua/scenesync.lua). Without it (not built, ADDONSIM_NATIVE=0) the stream is the JSON one, as before: nothing else
--- needs it.
+-- AddonSim's native core (native/, Rust), loaded through LuaJIT's FFI. It is required: the server, the runner and the
+-- SDK build it before they start the simulator (src/server/nativeCore.ts; by hand, `bun run native`). One handle
+-- (native.handle) holds the scene stream's item store, which keeps what the page holds and writes binary frames
+-- (lua/stream.lua), and the scene's walk with its mirror of the widgets (lua/scenesync.lua).
 local ffi = require("ffi")
 local sim = require("sim")
 
@@ -85,8 +84,12 @@ local function loadablePath(built)
         existing:close()
         return copy
     end
+    -- (written under a name of this process's own, then renamed: simulators starting side by side, a test suite's,
+    -- never load a copy another is still writing)
+    local unique = tostring({}):match("0x(%x+)") or "0"
+    local part = copy .. ".part-" .. unique .. "-" .. os.time() .. "-" .. math.floor(os.clock() * 1e6)
     local source = io.open(built, "rb")
-    local target = source and io.open(copy, "wb")
+    local target = source and io.open(part, "wb")
     if not (source and target) then
         if source then
             source:close()
@@ -96,46 +99,52 @@ local function loadablePath(built)
     target:write(source:read("*a"))
     target:close()
     source:close()
-    return copy
+    if os.rename(part, copy) then
+        return copy
+    end
+    -- (Windows renames onto no file that exists: another simulator's copy got there first, and is the same build)
+    os.remove(part)
+    existing = io.open(copy, "rb")
+    if existing then
+        existing:close()
+        return copy
+    end
+    return built
 end
 
+local BUILD_IT = "build it with `bun run native` (Rust from https://rustup.rs)"
+
 local library
----The native library, or nil (not built, turned off, or of another version)
+---The native library; an error when it is not built, does not load or is of another version
 function native.load()
-    if library ~= nil then
-        return library or nil
-    end
-    library = false
-    if os.getenv("ADDONSIM_NATIVE") == "0" then
-        return nil
+    if library then
+        return library
     end
     local built = (sim.root or ".") .. "/native/target/release/" .. libraryName()
     local file = io.open(built, "rb")
     if not file then
-        return nil
+        error("AddonSim's native core is not built (" .. built .. "): " .. BUILD_IT, 0)
     end
     file:close()
     local isLoaded, loaded = pcall(ffi.load, loadablePath(built))
     if not isLoaded then
-        io.stderr:write("The native core did not load (" .. tostring(loaded) .. "): the scene stream is JSON\n")
-        return nil
+        error("AddonSim's native core did not load (" .. tostring(loaded) .. "): " .. BUILD_IT, 0)
     end
     if loaded.sc_version() ~= VERSION then
-        io.stderr:write("The native core is of another version: build it again (bun run native)\n")
-        return nil
+        error("AddonSim's native core is of another version: " .. BUILD_IT .. " again", 0)
     end
     library = loaded
     return library
 end
 
 local handle
----The one native handle (the item store and the walk's mirror), or nil without the native core
+---The one native handle (the item store and the walk's mirror)
 function native.handle()
-    if handle == nil then
+    if not handle then
         local loaded = native.load()
-        handle = loaded and ffi.gc(loaded.sc_new(), loaded.sc_free) or false
+        handle = ffi.gc(loaded.sc_new(), loaded.sc_free)
     end
-    return handle or nil
+    return handle
 end
 
 return native

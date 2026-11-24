@@ -36,6 +36,7 @@ export class AddonMedia {
 
   /** The file for an Interface\AddOns\<Addon>\... path, or null when there is none (or the path leaves the folder) */
   async get(addonsRoot: string, path: string): Promise<Served | null> {
+    if (!addonsRoot) return null; // (no AddOns folder chosen, and the addon is in no other folder)
     const parts = splitPath(path);
     if (parts.length < 4 || parts[0]?.toLowerCase() !== "interface" || parts[1]?.toLowerCase() !== "addons")
       return null;

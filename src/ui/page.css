@@ -394,6 +394,12 @@
 .setup-step:hover {
   background: var(--surface-secondary);
 }
+/* (the setup's own buttons: the same keyboard focus as HeroUI's controls) */
+.setup-step:focus-visible,
+.setup-choice:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 .setup-step.is-current {
   background: var(--accent-soft);
 }
@@ -432,6 +438,13 @@
 .download-box {
   background: var(--surface-secondary);
   border-color: var(--separator);
+}
+/* The note over the game while its art is on its way: the page's surface over the game, readable on any of it */
+.art-loading {
+  background: color-mix(in oklab, var(--surface) 88%, transparent);
+  border: 1px solid var(--separator);
+  color: var(--foreground);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.35);
 }
 .enter-button:not([data-disabled="true"]) {
   box-shadow: 0 0 24px color-mix(in oklab, var(--accent) 50%, transparent);

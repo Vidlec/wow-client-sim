@@ -21,6 +21,8 @@ export type Flavour = {
   };
   /** The build string wago.tools knows the client's files and tables by ("1.60.1.71037") */
   wagoBuild: string;
+  /** Blizzard's product code for the client ("wowf"): its patch server's and wago.tools' name for its builds */
+  product: string;
   /** The interface source's game types, family and game: which lines of the game's TOCs and Startup.lua load */
   gameTypes: string[];
   family: string;
@@ -42,6 +44,8 @@ export type Flavour = {
   interfaceSource: { repository: string; branch: string };
   /** The folder the game installs this client in, inside "World of Warcraft" ("_forever_") */
   installFolder: string;
+  /** Whether the client has the keyring (C_ActionBar.ShouldShowKeyring: its bag bar button, the keyring bag) */
+  hasKeyring: boolean;
   /** The addons switched on in a fresh setup */
   defaultAddons: string[];
   /** The game's DB2 tables the simulator reads (wago.tools' CSV exports) */

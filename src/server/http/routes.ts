@@ -82,15 +82,6 @@ export const createRoutes = (app: App): RouteTable => {
   const routes: RouteTable = {
     ...createSetupRoutes(app),
     "/api/state": { GET: () => readState(app) },
-    "/api/scene": {
-      // The whole scene, when newer than the page's (a page without WebSockets polls this)
-      GET: async (_request, url) => {
-        const sinceText = url.searchParams.get("since");
-        const since = sinceText && /^-?\d+$/.test(sinceText) ? Number(sinceText) : null;
-        const text = await stream.waitWhole(host, since);
-        return jsonText(text ?? JSON.stringify({ version: since, unchanged: true, generation: host.generation }));
-      },
-    },
     "/api/addonCatalog": {
       GET: () => json(readCatalog(config, app.project?.addons)),
     },
@@ -139,16 +130,8 @@ export const createRoutes = (app: App): RouteTable => {
       },
     },
     "/atlas": {
-      // As the client resolves a name: where the flavour has an atlas variant (Forever's "-c60"), the plain name
-      // gives its variant where it has one, and a variant's name itself is unknown (the same rule as
-      // W.getAtlasInfo in lua/boot.lua)
-      GET: (_request, url) => {
-        const name = (url.searchParams.get("n") ?? "").toLowerCase();
-        const variant = config.atlasVariant ? config.atlasVariant.toLowerCase() : null;
-        if (!variant) return json(app.art.atlas(name) ?? {});
-        if (name.endsWith(variant)) return json({});
-        return json(app.art.atlas(`${name}${variant}`) ?? app.art.atlas(name) ?? {});
-      },
+      // By the element's name, as the client looks it up (src/server/assets/atlases.ts)
+      GET: (_request, url) => json(app.art.atlas(url.searchParams.get("n") ?? "") ?? {}),
     },
     // A game sound by file id or path, for the page to play (lua/sound.lua): the file as it is, its type from its bytes
     "/sound": {

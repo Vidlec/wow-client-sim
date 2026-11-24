@@ -63,9 +63,12 @@ export const snapshotFolders = async (folders: string[]): Promise<Map<string, nu
 
 const snapshot = (config: Config, project: Project | null): Promise<Map<string, number>> => {
   const sources = listAddonSources(config, project?.addons);
-  return snapshotFolders(
-    config.addons.map((name) => sources.get(name.toLowerCase())?.dir ?? join(config.addonsRoot, name)),
-  );
+  // (an addon found nowhere is looked for in the AddOns folder, when there is one)
+  const folders = config.addons.flatMap((name) => {
+    const dir = sources.get(name.toLowerCase())?.dir ?? (config.addonsRoot ? join(config.addonsRoot, name) : null);
+    return dir ? [dir] : [];
+  });
+  return snapshotFolders(folders);
 };
 
 const isSame = (first: Map<string, number>, second: Map<string, number>): boolean => {

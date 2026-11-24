@@ -1,4 +1,4 @@
---@addons QuestieDB, SimFixture
+--@addons SimQuestieDB, SimFixture
 -- Combat lockdown driven by a fight (lua/combat.lua): PLAYER_REGEN_DISABLED comes before the lockdown starts (its
 -- handlers may still do protected things, as in the client) and PLAYER_REGEN_ENABLED after it ends; an addon's own
 -- call to a protected function (targeting, casting) is forbidden, in combat or not, while the player's keys work; the

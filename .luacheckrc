@@ -36,8 +36,8 @@ steps[#steps + 1] = "fixtureHeard" -- (the fixture project's plugin adds this st
 files["scenarios/**"] = { read_globals = steps }
 -- The fixture addon is game code: the few game globals it uses, and its own
 files["scenarios/fixtures/addons/**"] = {
-    read_globals = { "CreateFrame", "UIParent", "GameTooltip", "Minimap", "C_QuestLog", "wipe" },
-    globals = { "SimFixtureDB", "fixtureHeard", "SlashCmdList", "SLASH_SIMFIXTURE1" },
+    read_globals = { "CreateFrame", "UIParent", "GameTooltip", "Minimap", "C_QuestLog", "wipe", "GetLocale" },
+    globals = { "SimFixtureDB", "fixtureHeard", "SlashCmdList", "SLASH_SIMFIXTURE1", "LibQuestieDB" },
 }
 -- A recording as the recorder addon saves it (its saved variable)
 files["scenarios/fixtures/sample-recording.lua"] = { globals = { "AddonSimRecording" } }

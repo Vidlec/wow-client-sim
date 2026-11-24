@@ -1,5 +1,5 @@
 // Small pieces the panels share: an empty state, a problem line, a switch with its label and note, a copy button,
-// the gamepad's icon (the icon set has none)
+// the gamepad's icon (the icon set has none), a path that wraps between its folders
 import { Check, Copy } from "@gravity-ui/icons";
 import { Button, Description, Label, Switch, Tooltip } from "@heroui/react";
 import { type ReactNode, useEffect, useState } from "react";
@@ -98,6 +98,19 @@ export const GamepadIcon = ({ className }: { className?: string }) => (
 );
 
 /** A title and its value in a two-column list */
+/** A file or folder path in monospace that wraps only after a separator, never inside a folder's name */
+export const PathText = ({ path, className }: { path: string; className?: string }) => (
+  <span className={`font-mono text-[11px] ${className ?? ""}`}>
+    {path.split(/(?<=[/\\])/).map((part, index) => (
+      // biome-ignore lint/suspicious/noArrayIndexKey: the parts of one path, in their fixed order
+      <span key={index}>
+        {part}
+        <wbr />
+      </span>
+    ))}
+  </span>
+);
+
 export const Facts = ({ rows }: { rows: readonly (readonly [string, ReactNode])[] }) => (
   <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[13px]">
     {rows.map(([key, value]) => (

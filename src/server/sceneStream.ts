@@ -9,9 +9,6 @@ import type { LuaHost } from "./luaHost.ts";
 
 /** Bytes a page may have waiting before it is dropped back to a whole scene (half a second of busy frames) */
 const MAX_BUFFERED_BYTES = 2_000_000;
-/** A page polling /api/scene this recently keeps the frames coming */
-const LEGACY_SECONDS = 2;
-const POLL_WAIT_MS = 500;
 const TIMING_WINDOW_MS = 1000;
 
 export type PageSocket = ServerWebSocket<{ needsWhole: boolean }>;
@@ -28,8 +25,9 @@ export type StreamPerf = {
 };
 
 /**
- * A frame for the pages: its JSON as text, or (with a binary scene, lua/stream.lua) one binary message: the header's
- * length (u32, little-endian), the header's JSON, then the binary scene (src/ui/engine/binaryFrame.ts)
+ * A frame for the pages: its JSON as text when the scene did not change (the counts, the pointer, the sounds), else
+ * one binary message: the header's length (u32, little-endian), the header's JSON, then the binary scene
+ * (lua/stream.lua, src/ui/engine/binaryFrame.ts)
  */
 const toPageMessage = (text: string, bin: Uint8Array | undefined): string | Uint8Array => {
   if (!bin) return text;
@@ -54,11 +52,8 @@ export class SceneStream {
   readonly #pages = new Set<PageSocket>();
   #inputs: InputEvent[] = [];
   #timings: Timing[] = [];
-  #version: number | null = null;
   #generation: number | null = null;
   #lastStatus: string | null = null;
-  #legacyAskedAt = 0;
-  #versionWaiters: (() => void)[] = [];
   #wakeClock: (() => void) | null = null;
 
   // The clock's wait: an input or a page joining ends it early, so its effect is drawn at once
@@ -116,7 +111,7 @@ export class SceneStream {
   }
 
   isWatched(): boolean {
-    return this.#pages.size > 0 || performance.now() - this.#legacyAskedAt < LEGACY_SECONDS * 1000;
+    return this.#pages.size > 0;
   }
 
   // How the clock keeps up, over the last second
@@ -153,7 +148,6 @@ export class SceneStream {
       this.#generation = generation;
       for (const page of this.#pages) page.data.needsWhole = true;
     }
-    const version = Number(/"version":(-?\d+)/.exec(text)?.[1] ?? Number.NaN);
     // (the counts and the pointer: a frame goes out when either changes, though nothing on the screen did)
     const counts = /"errors":\d+,"chat":\d+/.exec(text)?.[0] ?? "";
     const cursor = /,"cursor":("(?:[^"\\]|\\.)*"|\d+)/.exec(text)?.[1] ?? "";
@@ -173,39 +167,12 @@ export class SceneStream {
     this.#lastStatus = status;
     const waiting = [...this.#pages].filter((page) => page.data.needsWhole);
     if (waiting.length > 0) {
-      const answer = await host.requestWithBinary({ op: "sceneWhole", binary: true });
+      const answer = await host.requestWithBinary({ op: "sceneWhole" });
       const whole = toPageMessage(withGeneration(answer.text, generation), answer.bin);
       for (const page of waiting) {
         page.data.needsWhole = false;
         page.send(whole);
       }
     }
-    const newVersion = Number.isNaN(version) ? null : version;
-    if (newVersion !== this.#version) {
-      this.#version = newVersion;
-      for (const resolve of this.#versionWaiters.splice(0)) resolve();
-    }
-  }
-
-  /** The old poll (/api/scene, a page without WebSockets): the whole scene when it is newer than the page's */
-  async waitWhole(host: LuaHost, since: number | null): Promise<string | null> {
-    this.#legacyAskedAt = performance.now();
-    if (since !== null && this.#version === since && host.generation === this.#generation) {
-      let waiter: (() => void) | undefined;
-      const changed = await Promise.race([
-        new Promise<boolean>((resolve) => {
-          waiter = () => resolve(true);
-          this.#versionWaiters.push(waiter);
-        }),
-        Bun.sleep(POLL_WAIT_MS).then(() => false),
-      ]);
-      if (!changed) {
-        // (no longer waited on: a paused game polled twice a second would gather them otherwise)
-        const at = waiter ? this.#versionWaiters.indexOf(waiter) : -1;
-        if (at >= 0) this.#versionWaiters.splice(at, 1);
-        return null;
-      }
-    }
-    return withGeneration(await host.requestRaw({ op: "sceneWhole" }), host.generation);
   }
 }

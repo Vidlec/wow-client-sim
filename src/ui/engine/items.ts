@@ -140,8 +140,6 @@ export type SceneItems = readonly (SceneItem | undefined)[];
 /** What the server pushes: a whole scene, or what changed since the frame before, with the counts it keeps */
 export type SceneFrame = {
   version?: number;
-  /** (the poll's answer when nothing is newer) */
-  unchanged?: boolean;
   generation?: number;
   errors?: number;
   chat?: number;
@@ -164,7 +162,7 @@ export type SceneFrame = {
 
 /**
  * An item that only moved: its key, its box, its clip's box (0: none) and its masks' boxes (0: none), as the simulator
- * sends a kept item it gave new boxes (lua/stream.lua)
+ * sends a kept item it gave new boxes (the native walk: native/src/store.rs)
  */
 export type SceneMove = readonly [
   key: string,
