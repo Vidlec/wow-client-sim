@@ -36,8 +36,7 @@ export const runLuajit = async (
   });
   runningProcesses.add(child);
   const lines: string[] = [];
-  // Its two streams, merged line by line as they come (Python joined them into one pipe; a whole line at a time
-  // reads the same)
+  // Its two streams, merged line by line as they come (a whole line at a time: the report reads as one stream)
   const pump = async (stream: ReadableStream<Uint8Array>): Promise<void> => {
     const reader = createLineReader(stream);
     for (let line = await reader.next(); line !== null; line = await reader.next()) {

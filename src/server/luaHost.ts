@@ -5,7 +5,8 @@ import type { Subprocess } from "bun";
 import type { SimulatorStatus } from "../shared/setup.ts";
 import type { ArtSource } from "./art.ts";
 import { type Config, ROOT } from "./config.ts";
-import { createLineReader, type LineReader } from "./lineReader.ts";
+import { createFrameReader, type FrameReader, type HostReply } from "./frameReader.ts";
+import { createLineReader } from "./lineReader.ts";
 import { createMutex } from "./mutex.ts";
 import { writeRuntimeConfig } from "./runtimeConfig.ts";
 
@@ -14,10 +15,15 @@ export type HostAnswer = Record<string, unknown>;
 
 type Running = {
   process: Subprocess<"pipe", "pipe", "pipe">;
-  lines: LineReader;
+  answers: FrameReader;
 };
 
 const STOP_SECONDS = 3;
+// The longest a request may take before the simulator counts as hung (an addon's endless loop sent to /api/exec): it
+// is stopped, so the clock, the routes and a reload are not held forever behind it
+const REQUEST_SECONDS = 60;
+// The longest the variables' save may take at a stop, before the simulator is stopped without it
+const SAVE_SECONDS = 3;
 
 const drainStderr = async (stream: ReadableStream<Uint8Array>): Promise<void> => {
   const lines = createLineReader(stream);
@@ -79,10 +85,10 @@ export class LuaHost {
           stderr: "pipe",
           windowsHide: true, // (no console window for it, whoever started the server)
         });
-        const lines = createLineReader(process.stdout);
-        this.#running = { process, lines };
+        const answers = createFrameReader(process.stdout);
+        this.#running = { process, answers };
         void drainStderr(process.stderr);
-        const first = await lines.next();
+        const first = (await answers.next())?.text;
         try {
           this.boot = JSON.parse(first ?? "") as HostAnswer;
         } catch {
@@ -120,7 +126,15 @@ export class LuaHost {
   }
 
   /** The answer as the JSON text the host wrote: a scene is tens of kilobytes, many times a second, and passed on as is */
-  requestRaw(request: HostRequest): Promise<string> {
+  async requestRaw(request: HostRequest): Promise<string> {
+    return (await this.requestWithBinary(request)).text;
+  }
+
+  /**
+   * The answer's JSON text, and the binary frame that followed it when there was one (the scene stream's, asked for
+   * with binary: true; lua/stream.lua)
+   */
+  requestWithBinary(request: HostRequest): Promise<HostReply> {
     const asked = performance.now();
     return this.#mutex.run(async () => {
       this.lastLockWait = (performance.now() - asked) / 1000;
@@ -128,16 +142,31 @@ export class LuaHost {
     });
   }
 
-  async #requestLocked(request: HostRequest): Promise<string> {
+  async #requestLocked(request: HostRequest, seconds = REQUEST_SECONDS): Promise<HostReply> {
     const running = this.#running;
     if (!running || running.process.exitCode !== null) {
-      return JSON.stringify({ error: "the simulator is not running", boot: this.boot });
+      return { text: JSON.stringify({ error: "the simulator is not running", boot: this.boot }) };
     }
     this.#nextId += 1;
     running.process.stdin.write(`${JSON.stringify({ ...request, id: this.#nextId })}\n`);
     await running.process.stdin.flush();
-    const line = await running.lines.next();
-    return line ?? JSON.stringify({ error: "the simulator stopped", boot: this.boot });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const answer = await Promise.race([
+      running.answers.next(),
+      new Promise<"late">((resolve) => {
+        timer = setTimeout(() => resolve("late"), seconds * 1000);
+      }),
+    ]);
+    clearTimeout(timer);
+    if (answer === "late") {
+      // (hung: stopped, and said so; its answers are not waited for again)
+      if (this.#running === running) this.#running = null;
+      running.process.kill(9);
+      const error = `the simulator did not answer "${String(request.op)}" within ${seconds} s and was stopped (reload to start it again)`;
+      this.status = { state: "failed", error };
+      return { text: JSON.stringify({ error, boot: this.boot }) };
+    }
+    return answer ?? { text: JSON.stringify({ error: "the simulator stopped", boot: this.boot }) };
   }
 
   async #stopLocked(save: boolean): Promise<void> {
@@ -146,7 +175,7 @@ export class LuaHost {
     if (!running || running.process.exitCode !== null) return;
     if (save) {
       this.#running = running;
-      await this.#requestLocked({ op: "save" }).catch(() => undefined);
+      await this.#requestLocked({ op: "save" }, SAVE_SECONDS).catch(() => undefined);
       this.#running = null;
     }
     running.process.kill();

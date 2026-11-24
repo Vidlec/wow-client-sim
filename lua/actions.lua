@@ -24,17 +24,25 @@ local SLOTS = 180
 -- Spell names and icons, read once on first use (the tables are large and most runs never need them)
 local spellNames, spellIcons
 local function loadSpells()
-    if spellNames then return end
+    if spellNames then
+        return
+    end
     spellNames, spellIcons = {}, {}
     local readTable = actions.readTable
-    if not readTable then return end
+    if not readTable then
+        return
+    end
     for _, row in ipairs(readTable("SpellName", { "ID", "Name_lang" }) or {}) do
         local id = tonumber(row.ID)
-        if id then spellNames[id] = row.Name_lang end
+        if id then
+            spellNames[id] = row.Name_lang
+        end
     end
     for _, row in ipairs(readTable("SpellMisc", { "SpellID", "SpellIconFileDataID" }) or {}) do
         local id, icon = tonumber(row.SpellID), tonumber(row.SpellIconFileDataID)
-        if id and icon and icon > 0 and not spellIcons[id] then spellIcons[id] = icon end
+        if id and icon and icon > 0 and not spellIcons[id] then
+            spellIcons[id] = icon
+        end
     end
 end
 
@@ -54,16 +62,27 @@ end
 ---@return boolean isKnown The class's own spells (those its action bars hold) are known to a character of it
 function actions.isClassSpell(class, spellId)
     for _, known in ipairs(CLASS_SPELLS[tostring(class or ""):upper()] or {}) do
-        if known == spellId then return true end
+        if known == spellId then
+            return true
+        end
     end
     return false
 end
 
+---@return number[] spells The class's spells its first action bar holds (the spellbook's General takes those of no school)
+function actions.getClassSpells(class)
+    return CLASS_SPELLS[tostring(class or ""):upper()] or {}
+end
+
 function actions.getSlots(game)
-    if game.profile.actions then return game.profile.actions end
+    if game.profile.actions then
+        return game.profile.actions
+    end
     -- The class's own bar, made again when the character becomes another class (a scenario's login)
     local class = tostring(game.profile.class or ""):upper()
-    if actions.defaultSlots and actions.defaultClass == class then return actions.defaultSlots end
+    if actions.defaultSlots and actions.defaultClass == class then
+        return actions.defaultSlots
+    end
     local slots = {}
     for index, spellId in ipairs(CLASS_SPELLS[class] or {}) do
         slots[index] = { type = "spell", id = spellId }
@@ -74,11 +93,17 @@ function actions.getSlots(game)
 end
 
 function actions.install(G, game)
-    local function get(slot) return actions.getSlots(game)[tonumber(slot) or 0] end
+    local function get(slot)
+        return actions.getSlots(game)[tonumber(slot) or 0]
+    end
     local function getTexture(slot)
         local action = get(slot)
-        if not action then return nil end
-        if action.type == "spell" then return actions.getSpellIcon(action.id) or 136243 end
+        if not action then
+            return nil
+        end
+        if action.type == "spell" then
+            return actions.getSpellIcon(action.id) or 136243
+        end
         if action.type == "item" then
             local item = game.items and game.items[action.id]
             return item and item.icon or 134400
@@ -95,17 +120,27 @@ function actions.install(G, game)
     -- The global ones the action buttons still call
     G.GetActionInfo = function(slot)
         local action = get(slot)
-        if not action then return nil end
-        if action.type == "spell" then return "spell", action.id, "spell" end
+        if not action then
+            return nil
+        end
+        if action.type == "spell" then
+            return "spell", action.id, "spell"
+        end
         return action.type, action.id
     end
     G.GetActionTexture = getTexture
-    G.HasAction = function(slot) return get(slot) ~= nil end
-    G.GetBindingText = function(key) return key and tostring(key) or "" end
+    G.HasAction = function(slot)
+        return get(slot) ~= nil
+    end
+    G.GetBindingText = function(key)
+        return key and tostring(key) or ""
+    end
 
     local bar = G.C_ActionBar or {}
     G.C_ActionBar = bar
-    bar.HasAction = function(slot) return get(slot) ~= nil end
+    bar.HasAction = function(slot)
+        return get(slot) ~= nil
+    end
     bar.GetActionTexture = getTexture
     bar.GetActionText = function(slot)
         local action = get(slot)
@@ -125,36 +160,90 @@ function actions.install(G, game)
     end
     bar.IsUsableAction = function(slot)
         local action = get(slot)
-        if not action then return false, false end
-        if action.type == "item" then return getItemCount(action.id) > 0 or action.id == HEARTHSTONE, false end
+        if not action then
+            return false, false
+        end
+        if action.type == "item" then
+            return getItemCount(action.id) > 0 or action.id == HEARTHSTONE, false
+        end
         return true, false
     end
-    bar.GetActionCooldown = function() return noCooldown() end
+    bar.GetActionCooldown = function()
+        return noCooldown()
+    end
     bar.GetActionCharges = function()
-        return { currentCharges = 0, maxCharges = 0, cooldownStartTime = 0, cooldownDuration = 0, chargeModRate = 1, isActive = false }
+        return {
+            currentCharges = 0,
+            maxCharges = 0,
+            cooldownStartTime = 0,
+            cooldownDuration = 0,
+            chargeModRate = 1,
+            isActive = false,
+        }
     end
     bar.GetActionLossOfControlCooldownInfo = function()
         return { startTime = 0, duration = 0, modRate = 1, isActive = false, shouldReplaceNormalCooldown = false }
     end
-    bar.GetActionBarPage = function() return actions.page or 1 end
+    bar.GetActionBarPage = function()
+        return actions.page or 1
+    end
     bar.SetActionBarPage = function(page)
         actions.page = tonumber(page) or 1
         sim.fireEvent("ACTIONBAR_PAGE_CHANGED")
     end
-    bar.GetBonusBarOffset = function() return 0 end
-    bar.GetBonusBarIndex = function() return 0 end
-    bar.GetMultiCastBarIndex = function() return 0 end
-    bar.GetOverrideBarIndex = function() return 18 end
-    bar.GetVehicleBarIndex = function() return 16 end
-    bar.GetTempShapeshiftBarIndex = function() return 17 end
-    bar.GetExtraBarIndex = function() return 19 end
-    for _, name in ipairs({ "HasBonusActionBar", "HasOverrideActionBar", "HasVehicleActionBar", "HasTempShapeshiftActionBar",
-        "HasExtraActionBar", "IsPossessBarVisible", "IsCurrentAction", "IsAutoRepeatAction", "IsEquippedAction",
-        "IsEquippedGearOutfitAction", "UsesActionText", "IsAssistedCombatAction", "IsAutoCastPetAction", "IsEnabledAutoCastPetAction",
-        "IsConsumableAction", "IsStackableAction", "IsHarmfulAction", "IsHelpfulAction", "IsInterruptAction",
-        "IsMacroActionWithShowTooltip", "HasAssistedCombatActionButtons", "HasFlyoutActionButtons", "HasPetActionButtons",
-        "HasPetActionPetBarIndices", "ShouldOverrideBarShowHealthBar", "ShouldOverrideBarShowManaBar", "ShouldShowKeyring" }) do
-        bar[name] = function() return false end
+    bar.GetBonusBarOffset = function()
+        return 0
+    end
+    bar.GetBonusBarIndex = function()
+        return 0
+    end
+    bar.GetMultiCastBarIndex = function()
+        return 0
+    end
+    bar.GetOverrideBarIndex = function()
+        return 18
+    end
+    bar.GetVehicleBarIndex = function()
+        return 16
+    end
+    bar.GetTempShapeshiftBarIndex = function()
+        return 17
+    end
+    bar.GetExtraBarIndex = function()
+        return 19
+    end
+    for _, name in ipairs({
+        "HasBonusActionBar",
+        "HasOverrideActionBar",
+        "HasVehicleActionBar",
+        "HasTempShapeshiftActionBar",
+        "HasExtraActionBar",
+        "IsPossessBarVisible",
+        "IsCurrentAction",
+        "IsAutoRepeatAction",
+        "IsEquippedAction",
+        "IsEquippedGearOutfitAction",
+        "UsesActionText",
+        "IsAssistedCombatAction",
+        "IsAutoCastPetAction",
+        "IsEnabledAutoCastPetAction",
+        "IsConsumableAction",
+        "IsStackableAction",
+        "IsHarmfulAction",
+        "IsHelpfulAction",
+        "IsInterruptAction",
+        "IsMacroActionWithShowTooltip",
+        "HasAssistedCombatActionButtons",
+        "HasFlyoutActionButtons",
+        "HasPetActionButtons",
+        "HasPetActionPetBarIndices",
+        "ShouldOverrideBarShowHealthBar",
+        "ShouldOverrideBarShowManaBar",
+        "ShouldShowKeyring",
+    }) do
+        bar[name] = function()
+            return false
+        end
     end
     bar.IsAttackAction = function(slot)
         local action = get(slot)
@@ -164,34 +253,72 @@ function actions.install(G, game)
         local action = get(slot)
         return action ~= nil and action.type == "item"
     end
-    bar.IsActionInRange = function() return nil end
-    bar.HasRangeRequirements = function() return false end
+    bar.IsActionInRange = function()
+        return nil
+    end
+    bar.HasRangeRequirements = function()
+        return false
+    end
     bar.GetSpell = function(slot)
         local action = get(slot)
         return action and action.type == "spell" and action.id or nil
     end
-    bar.FindSpellActionButtons = function(spellId)
+    -- The slots holding a spell, in a set of bars (Enum.ActionBarSet: 1 the mouse's, 2 the gamepad's, 3 all, the
+    -- default): nil when none, as the client answers (the game's code tests for nil, its documentation says a table)
+    bar.FindSpellActionButtons = function(spellId, setToSearch)
+        local set = tonumber(setToSearch) or 3
         local found = {}
         for slot, action in pairs(actions.getSlots(game)) do
-            if action.type == "spell" and action.id == spellId then found[#found + 1] = slot end
+            local isInSet = set == 3 or (set == 1 and slot <= SLOTS) or (set == 2 and slot > SLOTS)
+            if isInSet and action.type == "spell" and action.id == spellId then
+                found[#found + 1] = slot
+            end
         end
+        if #found == 0 then
+            return nil
+        end
+        table.sort(found)
         return found
     end
-    bar.HasSpellActionButtons = function(spellId) return #bar.FindSpellActionButtons(spellId) > 0 end
-    bar.FindFlyoutActionButtons = function() return {} end
-    bar.FindPetActionButtons = function() return {} end
-    bar.FindAssistedCombatActionButtons = function() return {} end
-    bar.GetPetActionPetBarIndices = function() return {} end
-    bar.IsOnBarOrSpecialBar = function(spellId) return bar.HasSpellActionButtons(spellId) end
+    bar.HasSpellActionButtons = function(spellId)
+        return bar.FindSpellActionButtons(spellId) ~= nil
+    end
+    bar.FindFlyoutActionButtons = function()
+        return {}
+    end
+    bar.FindPetActionButtons = function()
+        return {}
+    end
+    bar.FindAssistedCombatActionButtons = function()
+        return {}
+    end
+    bar.GetPetActionPetBarIndices = function()
+        return {}
+    end
+    bar.IsOnBarOrSpecialBar = function(spellId)
+        return bar.HasSpellActionButtons(spellId)
+    end
     bar.PutActionInSlot = function(slot)
         sim.fireEvent("ACTIONBAR_SLOT_CHANGED", slot)
     end
     bar.RegisterActionUIButton = function() end
     bar.UnregisterActionUIButton = function() end
     bar.EnableActionRangeCheck = function() end
-    bar.ForceUpdateAction = function(slot) sim.fireEvent("ACTIONBAR_SLOT_CHANGED", slot) end
-    bar.GetProfessionQualityInfo = function() return nil end
-    bar.GetProfessionQuality = function() return nil end
+    bar.ForceUpdateAction = function(slot)
+        sim.fireEvent("ACTIONBAR_SLOT_CHANGED", slot)
+    end
+    bar.GetProfessionQualityInfo = function()
+        return nil
+    end
+    bar.GetProfessionQuality = function()
+        return nil
+    end
+    -- The gamepad's action bars keep their actions after the standard slots (the spellbook asks where, for each spell's
+    -- place on the bars)
+    G.C_GamepadUI = G.C_GamepadUI or {}
+    G.C_GamepadUI.GetFirstGamepadActionStorageSlotIndex = function()
+        return SLOTS + 1
+    end
 
     -- Spells by their real names and icons, where the game's tables have them
     if G.C_Spell then

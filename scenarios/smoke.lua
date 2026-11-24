@@ -14,20 +14,29 @@ wait(0.3)
 local function isInside(inner, outer)
     local left, bottom, width, height = inner:GetRect()
     local outerLeft, outerBottom, outerWidth, outerHeight = outer:GetRect()
-    if not left or not outerLeft then return true end
+    if not left or not outerLeft then
+        return true
+    end
     local slack = 1
-    return left >= outerLeft - slack and bottom >= outerBottom - slack
-        and left + width <= outerLeft + outerWidth + slack and bottom + height <= outerBottom + outerHeight + slack
+    return left >= outerLeft - slack
+        and bottom >= outerBottom - slack
+        and left + width <= outerLeft + outerWidth + slack
+        and bottom + height <= outerBottom + outerHeight + slack
 end
 
 local function checkTooltip(label)
     local tooltip = G.GameTooltip
-    if not tooltip:IsVisible() then return end
+    if not tooltip:IsVisible() then
+        return
+    end
     for index = 1, tooltip:NumLines() do
         for _, side in ipairs({ "Left", "Right" }) do
             local line = G["GameTooltipText" .. side .. index]
             if line and line:IsVisible() and (line:GetText() or "") ~= "" then
-                expect(isInside(line, tooltip), "tooltip text inside its box when hovering " .. label .. ": " .. line:GetText())
+                expect(
+                    isInside(line, tooltip),
+                    "tooltip text inside its box when hovering " .. label .. ": " .. line:GetText()
+                )
             end
         end
     end
@@ -37,9 +46,15 @@ local function hoverAll(label)
     local targets = {}
     for _, frame in ipairs(W.frames) do
         local s = S[frame]
-        if s.mouse and (s.scripts.OnEnter or (s.intrinsicScripts and s.intrinsicScripts.OnEnter)) and W.isVisible(frame) then
+        if
+            s.mouse
+            and (s.scripts.OnEnter or (s.intrinsicScripts and s.intrinsicScripts.OnEnter))
+            and W.isVisible(frame)
+        then
             local left, bottom, width, height = frame:GetRect()
-            if left and width > 2 and height > 2 then targets[#targets + 1] = { x = left + width / 2, y = G.GetScreenHeight() - (bottom + height / 2) } end
+            if left and width > 2 and height > 2 then
+                targets[#targets + 1] = { x = left + width / 2, y = G.GetScreenHeight() - (bottom + height / 2) }
+            end
         end
     end
     for _, target in ipairs(targets) do

@@ -72,7 +72,7 @@ export class AddonMedia {
       try {
         result = convertImage(data);
       } catch {
-        return null; // a broken image is looked at again next time, as the Python did
+        return null; // (a broken image is looked at again next time)
       }
     } else {
       result = { data, contentType: CONTENT_TYPES[extension] ?? "application/octet-stream" };

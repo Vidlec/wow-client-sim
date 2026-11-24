@@ -1,5 +1,5 @@
 // The game screen in the page: the engine mounted in a div, fitted again whenever its room changes, told the page's
-// choices (zoom, renderer, the world's backdrop, the inspector), and its socket's news passed to the store (a new run,
+// choices (zoom, the world's backdrop, the inspector), and its socket's news passed to the store (a new run,
 // a new error or chat line: the state is read again at once)
 import { useEffect, useRef } from "react";
 import type { StreamStatus } from "../engine/types.ts";
@@ -20,7 +20,6 @@ export const GameView = () => {
   const container = useRef<HTMLDivElement>(null);
   const screen = useGameScreen();
   const magnify = usePref("magnify");
-  const renderer = usePref("renderer");
   const isBackdropOn = usePref("worldBackdrop");
   const inspectOn = usePref("inspectOn");
   const inspectHeld = usePref("inspectHeld");
@@ -30,8 +29,7 @@ export const GameView = () => {
   useEffect(() => {
     const element = container.current;
     if (!element) return;
-    const { magnify: startMagnify, renderer: startRenderer } = getPrefs();
-    const created = createGameScreen(element, { magnify: startMagnify, renderer: startRenderer });
+    const created = createGameScreen(element, { magnify: getPrefs().magnify });
     setGameScreen(created);
     let last: StreamStatus | null = null;
     const stopStatus = created.onStatus((status) => {
@@ -51,7 +49,6 @@ export const GameView = () => {
   }, []);
 
   useEffect(() => screen?.setMagnify(magnify), [screen, magnify]);
-  useEffect(() => screen?.setRenderer(renderer), [screen, renderer]);
   useEffect(() => screen?.setWorldBackdrop(isBackdropOn ? uiMapId : null), [screen, isBackdropOn, uiMapId]);
   useEffect(
     () => screen?.setInspect({ isOn: inspectOn, isHeld: inspectHeld, isDrawnOnly: inspectDrawnOnly }),

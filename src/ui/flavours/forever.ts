@@ -44,17 +44,8 @@ export const FOREVER: Flavour = {
     { name: "Heirloom", color: "#00CCFF" },
   ],
   colors: {
-    gold: "#FFD100",
-    highlight: "#FFFFFF",
     money: { gold: "#F2CF4A", silver: "#C7CDD4", copper: "#C9773D" },
-    accent: "#4C9AFF",
   },
-  // The wide loading screens of the two continents (Interface\Glues\LoadingScreens\LoadScreenKalimdor and
-  // …EasternKingdom), as the game shows them
-  loadingScreens: [
-    { continentMatch: "kalimdor", fileId: 343002 },
-    { continentMatch: "eastern", fileId: 343001 },
-  ],
   instanceTypes: [
     { id: "party", name: "Dungeon" },
     { id: "raid", name: "Raid" },

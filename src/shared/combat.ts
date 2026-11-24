@@ -213,8 +213,6 @@ export type CombatAction =
   /** Every enemy gone, the player alive and whole, out of combat; seed: the rolls' new seed */
   | { action: "combatReset"; seed?: number };
 
-export type CombatActionName = CombatAction["action"];
-
 export type CombatActionResult = {
   ok: boolean;
   problem?: string;

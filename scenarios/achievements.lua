@@ -8,7 +8,9 @@ expect(G.CanShowAchievementUI(), "this client has achievements")
 expect(#G.GetCategoryList() > 10, "with their categories (" .. #G.GetCategoryList() .. ")")
 local classes
 for _, id in ipairs(G.GetCategoryList()) do
-    if G.GetCategoryInfo(id) == "Classes" then classes = id end
+    if G.GetCategoryInfo(id) == "Classes" then
+        classes = id
+    end
 end
 expect(classes and select(2, G.GetCategoryInfo(classes)) == -1, "Classes is a top category")
 
@@ -16,7 +18,9 @@ local function findEarned(title)
     for _, id in ipairs(G.GetCategoryList()) do
         for index = 1, (G.GetCategoryNumAchievements(id)) do
             local achievementId, name, _, isDone = G.GetAchievementInfo(id, index)
-            if name == title then return achievementId, isDone end
+            if name == title then
+                return achievementId, isDone
+            end
         end
     end
 end
@@ -25,8 +29,12 @@ expect(mageId and not mageDone, "Novice Mage is there and not earned at 24")
 local earnedNow = {}
 local hook = sim.onEventFired
 sim.onEventFired = function(event, id, ...)
-    if event == "ACHIEVEMENT_EARNED" then earnedNow[#earnedNow + 1] = id end
-    if hook then hook(event, id, ...) end
+    if event == "ACHIEVEMENT_EARNED" then
+        earnedNow[#earnedNow + 1] = id
+    end
+    if hook then
+        hook(event, id, ...)
+    end
 end
 setProfile({ level = 25 })
 wait(0.5)
@@ -51,4 +59,7 @@ wait(0.3)
 expect(G.GetNumFilteredAchievements() > 100, "its challenges are listed (" .. G.GetNumFilteredAchievements() .. ")")
 G.SetAchievementSearchString("Novice Mage")
 wait(0.1)
-expect(G.GetNumFilteredAchievements() == 1 and G.GetFilteredAchievementID(1) == mageId, "the search finds one by its title")
+expect(
+    G.GetNumFilteredAchievements() == 1 and G.GetFilteredAchievementID(1) == mageId,
+    "the search finds one by its title"
+)

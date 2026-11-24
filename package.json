@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.2.0",
   "description": "Run WoW Forever addons in the browser, for developing them",
+  "packageManager": "bun@1.4.5",
+  "engines": {
+    "bun": ">=1.4"
+  },
   "type": "module",
   "exports": {
     ".": "./src/sdk/index.ts",
@@ -13,16 +17,22 @@
   },
   "scripts": {
     "start": "bun run src/server/main.ts",
-    "build": "bun run src/cli/build.ts",
     "dev": "bun --watch run src/server/main.ts",
     "play": "bun run src/cli/play.ts",
     "shots": "bun run src/cli/shots.ts",
     "coverage": "bun run src/cli/coverage.ts",
     "test": "bun test",
+    "test:lua": "luajit lua/tests/run.lua",
+    "check": "bun run typecheck && bun run lint && bun run lint:lua && bun test && bun run test:lua && bun run native:check",
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
     "format": "biome check --write .",
-    "wowless": "bun run src/cli/wowless.ts"
+    "format:lua": "bun tools/lua-tools.ts format lua scenarios tools",
+    "lint:lua": "bun tools/lua-tools.ts check lua scenarios tools",
+    "tools:lua": "bun tools/lua-tools.ts install",
+    "wowless": "bun run src/cli/wowless.ts",
+    "native": "cargo build --release --manifest-path native/Cargo.toml",
+    "native:check": "cargo fmt --check --manifest-path native/Cargo.toml && cargo clippy --release --all-targets --manifest-path native/Cargo.toml -- -D warnings && cargo test --release --manifest-path native/Cargo.toml"
   },
   "dependencies": {
     "@gravity-ui/icons": "^2.23.1",

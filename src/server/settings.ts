@@ -8,7 +8,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSyn
 import { dirname } from "node:path";
 import type { EditModeLayout, Settings, SettingsChange, SetupProblem } from "../shared/setup.ts";
 import { DEFAULT_FLAVOUR, findFlavour, isKnownFlavour } from "./flavours/index.ts";
-import { HOME_OVERRIDE_SET, IS_SOURCE_CHECKOUT, LEGACY_CONFIG_PATH, SETTINGS_PATH } from "./paths.ts";
+import { HOME_OVERRIDE_SET, LEGACY_CONFIG_PATH, SETTINGS_PATH } from "./paths.ts";
 
 /** The settings and the unknown keys kept beside them */
 export type StoredSettings = Settings & { [key: string]: unknown };
@@ -22,6 +22,7 @@ const IMPORTED_KEY = "_importedConfigTime";
 export const defaultSettings = (): Settings => ({
   flavour: DEFAULT_FLAVOUR.id,
   addonsRoot: "",
+  addonFolders: [],
   interfaceRoot: "",
   addons: [...DEFAULT_FLAVOUR.defaultAddons],
   blizzardAddons: "all",
@@ -65,6 +66,7 @@ type Check = (value: unknown) => string | null;
 const CHECKS: { [K in keyof Settings]: Check } = {
   flavour: (value) => (typeof value === "string" && isKnownFlavour(value) ? null : "an unknown flavour"),
   addonsRoot: (value) => (typeof value === "string" ? null : "should be a folder's path"),
+  addonFolders: (value) => (isStringList(value) ? null : "should be a list of folders' paths"),
   interfaceRoot: (value) => (typeof value === "string" ? null : "should be a folder's path"),
   addons: (value) => (isStringList(value) ? null : "should be a list of addon folder names"),
   blizzardAddons: (value) => (value === "all" || value === "light" ? null : 'should be "all" or "light"'),
@@ -113,7 +115,7 @@ const fromLegacyConfig = (legacy: Record<string, unknown>): Record<string, unkno
 };
 
 const legacyConfigTime = (): number | null => {
-  if (!IS_SOURCE_CHECKOUT || HOME_OVERRIDE_SET || !existsSync(LEGACY_CONFIG_PATH)) return null;
+  if (HOME_OVERRIDE_SET || !existsSync(LEGACY_CONFIG_PATH)) return null;
   return statSync(LEGACY_CONFIG_PATH).mtimeMs;
 };
 
@@ -168,4 +170,15 @@ export const publicSettings = (settings: StoredSettings): Settings => {
   for (const key of SETTING_KEYS) result[key] = settings[key];
   if (Array.isArray(settings.blizzardAddons)) result.blizzardAddons = "all";
   return result as Settings;
+};
+
+/** Each project's addons switched on in the Addons tab, by the project's folder (kept between runs) */
+export const readProjectAddons = (settings: StoredSettings): Record<string, string[]> => {
+  const kept = settings.projectAddons;
+  if (!kept || typeof kept !== "object" || Array.isArray(kept)) return {};
+  const valid: Record<string, string[]> = {};
+  for (const [root, addons] of Object.entries(kept as Record<string, unknown>)) {
+    if (Array.isArray(addons) && addons.every((name) => typeof name === "string")) valid[root] = addons as string[];
+  }
+  return valid;
 };

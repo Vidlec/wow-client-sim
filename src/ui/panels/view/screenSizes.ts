@@ -13,8 +13,3 @@ export const UI_SCALE_MAX = 1.15;
 export const UI_SCALE_MARKS = [0.64, 0.8, 1, 1.15] as const;
 
 export const formatSize = (size: string): string => size.replace("x", "×");
-
-export const parseSize = (size: string): { width: number; height: number } | null => {
-  const match = /^(\d+)x(\d+)$/.exec(size);
-  return match ? { width: Number(match[1]), height: Number(match[2]) } : null;
-};

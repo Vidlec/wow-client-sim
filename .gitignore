@@ -8,8 +8,8 @@ interface/
 # The addons' saved variables and the simulator's own state, per machine
 saved/
 
-# What `bun run build` makes
-dist/
+# What `bun run native` builds
+native/target/
 
 # What the scenario runner leaves behind: the last run's scenes, its times, coverage, the client API report
 scenarios/.last-run/
@@ -20,6 +20,4 @@ api-report.txt
 # Machine-local: the old config.json (read once into the user's settings), an editor tool's local state
 config.json
 .impeccable/
-
-# A stray empty file a run once left at the root
-/QuestText.lua
+tools/bin/

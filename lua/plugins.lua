@@ -55,19 +55,25 @@ local stepAdders, bootHooks = {}, {}
 ---@param name string The addon's name, as members name it (joinParty({ addon = name }))
 ---@param spec PartyAddonSpec
 function plugins.registerPartyAddon(name, spec)
-    assert(type(name) == "string" and name ~= "" and name ~= "none", "a party addon needs a name (not \"none\")")
-    if not partyAddons[name] then partyAddonOrder[#partyAddonOrder + 1] = name end
+    assert(type(name) == "string" and name ~= "" and name ~= "none", 'a party addon needs a name (not "none")')
+    if not partyAddons[name] then
+        partyAddonOrder[#partyAddonOrder + 1] = name
+    end
     partyAddons[name] = spec or {}
 end
 
 ---@return PartyAddonSpec? spec The registered addon of that name
-function plugins.getPartyAddon(name) return partyAddons[name] end
+function plugins.getPartyAddon(name)
+    return partyAddons[name]
+end
 
 ---The addon a member runs when none is named: the default one registered last, else "none".
 function plugins.defaultPartyAddon()
     local default = "none"
     for _, name in ipairs(partyAddonOrder) do
-        if partyAddons[name].isDefault then default = name end
+        if partyAddons[name].isDefault then
+            default = name
+        end
     end
     return default
 end
@@ -75,11 +81,24 @@ end
 ---The party addons for the page: "none" first, then each registered one.
 function plugins.describePartyAddons()
     local default = plugins.defaultPartyAddon()
-    local list = { { id = "none", label = "No addon", note = "Only what the game itself shares", color = "default", isDefault = default == "none" } }
+    local list = {
+        {
+            id = "none",
+            label = "No addon",
+            note = "Only what the game itself shares",
+            color = "default",
+            isDefault = default == "none",
+        },
+    }
     for _, name in ipairs(partyAddonOrder) do
         local spec = partyAddons[name]
-        list[#list + 1] = { id = name, label = spec.label or name, note = spec.note or "", color = spec.color or "default",
-            isDefault = default == name }
+        list[#list + 1] = {
+            id = name,
+            label = spec.label or name,
+            note = spec.note or "",
+            color = spec.color or "default",
+            isDefault = default == name,
+        }
     end
     return list
 end
@@ -89,9 +108,13 @@ end
 function plugins.callPartyAddon(member, hook, ...)
     local spec = partyAddons[member.addon]
     local handler = spec and spec[hook]
-    if not handler then return false end
+    if not handler then
+        return false
+    end
     local isDone, problem = xpcall(handler, debug.traceback, member, ...)
-    if not isDone then sim.reportError("party addon " .. tostring(member.addon) .. " " .. hook .. ": " .. tostring(problem), "") end
+    if not isDone then
+        sim.reportError("party addon " .. tostring(member.addon) .. " " .. hook .. ": " .. tostring(problem), "")
+    end
     return true
 end
 
@@ -102,38 +125,67 @@ end
 function plugins.sendFromMember(member, prefix, text, channel, delay)
     channel = channel or "PARTY"
     sim.G.C_Timer.After(delay or 0.3, function()
-        if not require("party").findMember(member.name) then return end
-        sim.fireEvent("CHAT_MSG_ADDON", prefix, text, channel, plugins.fullName(member), channel == "WHISPER" and game.profile.name or "")
+        if not require("party").findMember(member.name) then
+            return
+        end
+        sim.fireEvent(
+            "CHAT_MSG_ADDON",
+            prefix,
+            text,
+            channel,
+            plugins.fullName(member),
+            channel == "WHISPER" and game.profile.name or ""
+        )
     end)
 end
 
 ---A member's name with its realm, as the game gives senders ("Garra-Realm").
-function plugins.fullName(member) return member.name .. "-" .. (member.realm or game.profile.realm) end
+function plugins.fullName(member)
+    return member.name .. "-" .. (member.realm or game.profile.realm)
+end
 
 ---@return PartyMember[] members The group's members, in party1..party4 order (do not change the list)
-function plugins.partyMembers() return require("party").members end
+function plugins.partyMembers()
+    return require("party").members
+end
 
 ---The player's name, for messages whispered to them.
-function plugins.playerName() return game.profile.name end
+function plugins.playerName()
+    return game.profile.name
+end
+
+---@return table G The game's globals, as the addons see them (a plugin that runs an addon's own code in a sandbox reads
+---them through it: a party member's addon, say)
+function plugins.gameGlobals()
+    return sim.G
+end
 
 ---Adds scenario steps: adder(steps, act) is called with the scenario's step table (set fields on it) and act(name,
 ---ok, problem), which counts a step, fails the scenario when ok is false, and lets the clock run a moment. Called
 ---again after a scenario's reload().
-function plugins.addSteps(adder) stepAdders[#stepAdders + 1] = adder end
+function plugins.addSteps(adder)
+    stepAdders[#stepAdders + 1] = adder
+end
 
 ---The scenario runner's part: every plugin's steps added to a scenario's step table.
 function plugins.installSteps(steps, act)
-    for _, adder in ipairs(stepAdders) do adder(steps, act) end
+    for _, adder in ipairs(stepAdders) do
+        adder(steps, act)
+    end
 end
 
 ---Runs a function right before the addons load: the game's own interface is in by then (its frames and mixins), so
 ---a plugin may hook them.
-function plugins.onBoot(hook) bootHooks[#bootHooks + 1] = hook end
+function plugins.onBoot(hook)
+    bootHooks[#bootHooks + 1] = hook
+end
 
 function plugins.runBootHooks()
     for _, hook in ipairs(bootHooks) do
         local isDone, problem = xpcall(hook, debug.traceback)
-        if not isDone then sim.reportError("plugin boot hook: " .. tostring(problem), "") end
+        if not isDone then
+            sim.reportError("plugin boot hook: " .. tostring(problem), "")
+        end
     end
 end
 
@@ -145,7 +197,9 @@ function plugins.load(paths)
             sim.reportError("plugin " .. tostring(path) .. ": " .. tostring(problem), "")
         else
             local isDone, runProblem = xpcall(chunk, debug.traceback)
-            if not isDone then sim.reportError("plugin " .. tostring(path) .. ": " .. tostring(runProblem), "") end
+            if not isDone then
+                sim.reportError("plugin " .. tostring(path) .. ": " .. tostring(runProblem), "")
+            end
         end
     end
 end

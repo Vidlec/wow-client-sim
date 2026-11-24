@@ -9,7 +9,9 @@ resetCombat(5)
 local regenEnabled = 0
 local listener = G.CreateFrame("Frame")
 listener:RegisterEvent("PLAYER_REGEN_ENABLED")
-listener:SetScript("OnEvent", function() regenEnabled = regenEnabled + 1 end)
+listener:SetScript("OnEvent", function()
+    regenEnabled = regenEnabled + 1
+end)
 
 local movement = require("movement")
 local function where()
@@ -21,7 +23,9 @@ expect(not combat.flee(), "with nothing fighting her, Run away refuses")
 expect(not combat.player.isFleeing, "with nothing fighting her there is nothing to run from")
 
 local first, ids = spawn(3111, { distance = 6, count = 2 }) -- Razormane Quilboar
-waitUntil(function() return combat.player.inCombat end, 10, "they come at her")
+waitUntil(function()
+    return combat.player.inCombat
+end, 10, "they come at her")
 expect(G.InCombatLockdown(), "in combat")
 attack(first)
 wait(1)
@@ -33,10 +37,15 @@ expect(not combat.player.isAutoAttacking, "running stops her swings")
 -- Her back to them: each is behind her now
 for _, id in ipairs(ids) do
     local boar = enemy(id)
-    expect(math.abs(boar.bearing) > math.pi / 2, boar.name .. " is behind her (" .. math.floor(math.deg(boar.bearing)) .. "°)")
+    expect(
+        math.abs(boar.bearing) > math.pi / 2,
+        boar.name .. " is behind her (" .. math.floor(math.deg(boar.bearing)) .. "°)"
+    )
 end
 
-local seconds = waitUntil(function() return not combat.player.inCombat end, 30, "they give up")
+local seconds = waitUntil(function()
+    return not combat.player.inCombat
+end, 30, "they give up")
 local _, endNorth, endWest = where()
 local ran = math.sqrt((endNorth - startNorth) ^ 2 + (endWest - startWest) ^ 2)
 expect(ran > 40, "she ran a good way (" .. math.floor(ran) .. " yards in " .. math.floor(seconds) .. " s)")
@@ -45,14 +54,18 @@ expect(not combat.player.isFleeing and not movement.describe().isAutoRunning, "t
 expect(G.UnitHealth("player") > 0, "alive")
 local evaded = 0
 for _, line in ipairs(combat.log) do
-    if (line.text or ""):find("evades") then evaded = evaded + 1 end
+    if (line.text or ""):find("evades") then
+        evaded = evaded + 1
+    end
 end
 expect(evaded >= 2, "both gave up (EVADE in the combat log: " .. evaded .. ")")
 
 -- Stopping a run by hand: S (or the page's Stop) ends it, and she stays in the fight
 resetCombat(6)
 spawn(3111, { distance = 6 })
-waitUntil(function() return combat.player.inCombat end, 10, "another comes at her")
+waitUntil(function()
+    return combat.player.inCombat
+end, 10, "another comes at her")
 flee()
 wait(0.5)
 hold("S", 0.2)

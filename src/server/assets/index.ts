@@ -1,5 +1,5 @@
 // Game art for AddonSim: real WoW files fetched from wago.tools and converted for the browser. Everything downloaded
-// is cached under cacheDir, in the same files the Python server used (both can run on one cache):
+// is cached under cacheDir, shared by every process that runs (the server, the daemon, suite runs):
 //
 //   listfile.sqlite             path -> fileDataID index (interface/, fonts/ and the minimap tiles)
 //   db2/<build>[-<locale>]/<Table>.csv   DB2 tables (UiTextureAtlas, UiTextureAtlasMember, UiMap...)
@@ -18,14 +18,6 @@ import { AddonMedia } from "./media.ts";
 import { getExtensionRank, splitExtension, splitPath } from "./paths.ts";
 import { TextureStore } from "./textures.ts";
 import type { AssetsStatus, AtlasInfo, Served } from "./types.ts";
-
-export { decodeBlp, getBlpEncoding, getBlpInfo } from "./blp.ts";
-export { NotFoundError } from "./download.ts";
-export { FONT_MAGICS } from "./fonts.ts";
-export { CONTENT_TYPES, convertImage, getImageKind } from "./image.ts";
-export { encodePng, getPngSize } from "./png.ts";
-export { decodeTga } from "./tga.ts";
-export type { AssetsStatus, AtlasInfo, DecodedImage, Served } from "./types.ts";
 
 /** The default flavour's build (a store is normally made for the settings' build) */
 export const DEFAULT_BUILD: string = DEFAULT_FLAVOUR.wagoBuild;

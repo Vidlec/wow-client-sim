@@ -4,7 +4,7 @@
 import { spawn } from "node:child_process";
 import { join } from "node:path";
 import type { Project } from "../project/config.ts";
-import { IS_STANDALONE, SOURCE_ROOT } from "../server/paths.ts";
+import { SOURCE_ROOT } from "../server/paths.ts";
 import { codeStamp, type DaemonFile, pingDaemon, readDaemonFile } from "./daemonFile.ts";
 import { SimBase, type SimInfo } from "./sim.ts";
 import type {
@@ -87,11 +87,16 @@ export class RemoteSim extends SimBase {
   }
 }
 
-/** The command that runs the daemon in the foreground: this executable, or the CLI from the sources */
-const daemonCommand = (project: Project): string[] =>
-  IS_STANDALONE
-    ? [process.execPath, "daemon", "run", "--project", project.root]
-    : [process.execPath, "run", join(SOURCE_ROOT, "src", "cli", "main.ts"), "daemon", "run", "--project", project.root];
+/** The command that runs the daemon in the foreground: the CLI from the sources */
+const daemonCommand = (project: Project): string[] => [
+  process.execPath,
+  "run",
+  join(SOURCE_ROOT, "src", "cli", "main.ts"),
+  "daemon",
+  "run",
+  "--project",
+  project.root,
+];
 
 /** Starts the project's daemon as a process of its own (it outlives this one); its file once it answers */
 export const startDaemon = async (project: Project): Promise<DaemonFile> => {

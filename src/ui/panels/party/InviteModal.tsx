@@ -1,5 +1,5 @@
 // Inviting a simulated player: a name (or one suggested), their class picked by its colour, their level and the quest
-// addon they run (it decides what they tell the party: Questie's messages, a project's plugin's, or only what the game
+// addon they run (it decides what they tell the party: what a project's plugin makes it say, or only what the game
 // shares). The addons offered are the ones the simulator lists (partyAddons.ts).
 import { PersonPlus } from "@gravity-ui/icons";
 import { Button, Input, Label, ListBox, Modal, NumberField, Select, TextField, toast } from "@heroui/react";

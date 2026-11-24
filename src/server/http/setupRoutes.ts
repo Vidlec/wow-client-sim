@@ -1,16 +1,16 @@
 // The setup's routes (src/shared/setup.ts has the contract): the settings and what is missing, changes to them, the
-// interface source's download, and help with folders (what a path holds, the system's folder dialog).
+// interface source's download, and help with folders (what a path holds, the page's folder browser).
 import {
   type FolderCheckRequest,
   type FolderKind,
-  type FolderPickRequest,
+  type FolderListRequest,
   SETUP_ROUTES,
   type SettingsChange,
 } from "../../shared/setup.ts";
 import type { App } from "../app.ts";
 import { findFlavour } from "../flavours/index.ts";
+import { listFolder } from "../setup/browse.ts";
 import { checkFolder } from "../setup/detect.ts";
-import { pickFolder } from "../setup/pickFolder.ts";
 import { json, readBody } from "./respond.ts";
 import type { RouteTable } from "./routes.ts";
 
@@ -34,14 +34,13 @@ export const createSetupRoutes = (app: App): RouteTable => ({
       return json(checkFolder(kind, String(body.path ?? ""), findFlavour(app.settings.flavour)));
     },
   },
-  [SETUP_ROUTES.pickFolder]: {
+  [SETUP_ROUTES.listFolder]: {
     POST: async (request) => {
-      const body = (await readBody(request)) as Partial<FolderPickRequest>;
+      const body = (await readBody(request)) as Partial<FolderListRequest>;
       const kind = readKind(body.kind);
       if (!kind) return json({ error: "kind should be addons, interface or luajit" }, 400);
-      const pick: FolderPickRequest = { kind };
-      if (typeof body.startPath === "string" && body.startPath) pick.startPath = body.startPath;
-      return json(await pickFolder(pick));
+      const path = typeof body.path === "string" ? body.path : undefined;
+      return json(listFolder(kind, path, findFlavour(app.settings.flavour)));
     },
   },
 });

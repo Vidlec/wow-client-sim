@@ -35,8 +35,12 @@ profile.stop()
 
 local function top(counts, limit, title)
     local rows = {}
-    for name, count in pairs(counts) do rows[#rows + 1] = { name, count } end
-    table.sort(rows, function(a, b) return a[2] > b[2] end)
+    for name, count in pairs(counts) do
+        rows[#rows + 1] = { name, count }
+    end
+    table.sort(rows, function(a, b)
+        return a[2] > b[2]
+    end)
     print(("== %s"):format(title))
     for index = 1, math.min(limit, #rows) do
         print(("%6.1f%%  %s"):format(rows[index][2] * 100 / total, rows[index][1]))
@@ -44,7 +48,9 @@ local function top(counts, limit, title)
 end
 print(("boot: %.1f s, %d samples"):format(seconds, total))
 local stateRows = {}
-for state, count in pairs(states) do stateRows[#stateRows + 1] = ("%s %.1f%%"):format(STATE_NAMES[state] or state, count * 100 / total) end
+for state, count in pairs(states) do
+    stateRows[#stateRows + 1] = ("%s %.1f%%"):format(STATE_NAMES[state] or state, count * 100 / total)
+end
 print("VM: " .. table.concat(stateRows, ", "))
 top(fileCounts, 25, "files (self)")
 top(selfCounts, 30, "lines (self)")

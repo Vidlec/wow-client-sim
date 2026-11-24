@@ -7,8 +7,9 @@
 // is the project's daemon for as long as it runs, so `addonsim eval` in a shell reaches the same game.
 import type { Project } from "../project/config.ts";
 import { type DaemonHandle, serveDaemon } from "../sdk/daemon.ts";
+import { codeStamp } from "../sdk/daemonFile.ts";
 import { LocalSim } from "../sdk/local.ts";
-import { findDaemon, RemoteSim } from "../sdk/remote.ts";
+import { findDaemon, RemoteSim, stopDaemon } from "../sdk/remote.ts";
 import type { Sim } from "../sdk/sim.ts";
 import { createLineReader } from "../server/lineReader.ts";
 import { APP_VERSION } from "../server/paths.ts";
@@ -27,22 +28,39 @@ const write = (message: Record<string, unknown>): void => {
   process.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", ...message })}\n`);
 };
 
-/** The game the tools use: the running daemon's, else one held here and served as the daemon */
-const openSim = async (project: Project): Promise<{ sim: Sim; daemon: DaemonHandle | null }> => {
+type Opened = { sim: Sim; daemon: DaemonHandle | null; token: string | null };
+
+/** The game the tools use: the running daemon's (one running the simulator's current code), else one held here and
+ * served as the daemon */
+const openSim = async (project: Project): Promise<Opened> => {
   const running = await findDaemon(project);
-  if (running) return { sim: new RemoteSim(project, running.file, false), daemon: null };
+  if (running && (running.file.codeStamp ?? 0) >= codeStamp())
+    return { sim: new RemoteSim(project, running.file, false), daemon: null, token: running.file.token };
+  // (one running the code from before it changed: ended, as the CLI ends it)
+  if (running) await stopDaemon(project);
   const sim = new LocalSim(project);
   sim.engine.prewarm();
   // (asked to stop, as the CLI asks a daemon older than the simulator's code: this server stops being the daemon,
   // and keeps its game for its own tools)
   const daemon: DaemonHandle = serveDaemon(project, sim.engine, { idleMinutes: 0, onEnd: () => void daemon.stop() });
-  return { sim, daemon };
+  return { sim, daemon, token: null };
+};
+
+/** Whether another process's daemon this server uses still runs (it ends itself when unused a while, and the CLI ends
+ * one older than the code) */
+const isStillThere = async (project: Project, opened: Opened): Promise<boolean> => {
+  if (opened.daemon || opened.token === null) return true;
+  const running = await findDaemon(project);
+  return running?.file.token === opened.token;
 };
 
 export const runMcpServer = async (project: Project): Promise<void> => {
-  let opened: Promise<{ sim: Sim; daemon: DaemonHandle | null }> | null = null;
-  const getSim = (): Promise<{ sim: Sim; daemon: DaemonHandle | null }> => {
-    opened ??= openSim(project);
+  let opened: Promise<Opened> | null = null;
+  // (a daemon gone since is replaced: by a new one's game, or this server's own)
+  const getSim = async (): Promise<Opened> => {
+    const current = opened && (await opened.catch(() => null));
+    if (current && (await isStillThere(project, current))) return current;
+    opened = openSim(project);
     return opened;
   };
   // (booting starts at once, while the client is still saying hello)

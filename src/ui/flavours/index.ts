@@ -26,7 +26,3 @@ export const findRace = (flavour: Flavour, file: string): RaceInfo =>
 
 export const findFaction = (flavour: Flavour, name: string | undefined): FactionInfo =>
   flavour.factions[name === "Alliance" || name === "Horde" ? name : "Neutral"];
-
-/** A continent's loading screen (by a word of its name), or none */
-export const findLoadingScreen = (flavour: Flavour, continentName: string): number | null =>
-  flavour.loadingScreens.find((screen) => continentName.toLowerCase().includes(screen.continentMatch))?.fileId ?? null;

@@ -1,0 +1,17 @@
+# Text files are kept with LF line endings, in the repository and in every checkout (Windows, macOS, Linux alike):
+# the simulator, Biome and the scenarios read them the same everywhere
+* text=auto eol=lf
+
+# Windows' own scripts keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary
+*.png binary
+*.jpg binary
+*.blp binary
+*.ttf binary
+*.otf binary
+*.ico binary
+*.zip binary

@@ -5,6 +5,7 @@
 // change, so an edit and then a run still finds a warm game (an editor's save to the next command is seconds).
 import { type FSWatcher, watch } from "node:fs";
 import { join } from "node:path";
+import { findAddonDir } from "../server/addonSources.ts";
 import { ROOT } from "../server/config.ts";
 import { GameProcess } from "./gameProcess.ts";
 import { type GameSpec, type RuntimeMaker, specKey } from "./runtime.ts";
@@ -21,6 +22,7 @@ export class Pool {
   /** Off: nothing is booted ahead (createSim's default in a test, which wants its games and no others) */
   isWarming: boolean;
   readonly #warm: GameProcess[] = [];
+  #isClosed = false;
   /** Kinds being made now (their runtime config written): not made twice */
   readonly #booting = new Set<string>();
   readonly #watchers: FSWatcher[] = [];
@@ -52,7 +54,7 @@ export class Pool {
     ]);
     for (const plugin of project.plugins) folders.add(join(plugin, ".."));
     // The installed addons the project loads (QuestieDB...): they change rarely, but a game must see it when they do
-    for (const name of project.installed) folders.add(join(config.addonsRoot, name));
+    for (const name of project.installed) folders.add(findAddonDir(config, [], name));
     return [...folders];
   }
 
@@ -100,12 +102,18 @@ export class Pool {
     void this.#make(spec).then(
       (game) => {
         this.#booting.delete(key);
+        // (closed meanwhile: nobody would ever end it)
+        if (this.#isClosed) {
+          void game.kill();
+          return;
+        }
         this.#warm.push(game);
         // (the oldest kind goes when there are too many)
         while (this.#warm.length > MAX_WARM) void this.#warm.shift()?.kill();
         game.ready.catch(() => {
           const index = this.#warm.indexOf(game);
           if (index >= 0) this.#warm.splice(index, 1);
+          void game.kill(); // (a boot that failed may leave its process up)
         });
       },
       () => this.#booting.delete(key),
@@ -122,7 +130,12 @@ export class Pool {
     // (warm: booted already; one still booting saved some of the time, not all)
     const wasWarm = found?.isBooted === true;
     this.#boot(spec);
-    await game.ready;
+    try {
+      await game.ready;
+    } catch (problem) {
+      await game.kill(); // (a boot that failed may leave its process up)
+      throw problem;
+    }
     return { game, wasWarm };
   }
 
@@ -145,6 +158,8 @@ export class Pool {
   }
 
   async close(): Promise<void> {
+    this.#isClosed = true;
+    this.isWarming = false;
     for (const watcher of this.#watchers.splice(0)) watcher.close();
     if (this.#settleTimer) clearTimeout(this.#settleTimer);
     await Promise.all(this.#warm.splice(0).map((game) => game.kill()));

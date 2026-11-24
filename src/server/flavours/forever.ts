@@ -11,7 +11,9 @@ export const forever: Flavour = {
   gameTypes: ["mainline", "camelot"],
   family: "Mainline",
   game: "Camelot",
-  tocSuffixes: ["_Forever", "_Vanilla", ""],
+  // The client's game is Camelot: addons built for Forever ship a _Camelot TOC (MapUtils has only that one;
+  // MinimapButtonButton's _Camelot TOC is 16001 where its _Vanilla is 11509, so _Camelot comes first)
+  tocSuffixes: ["_Forever", "_Camelot", "_Vanilla", ""],
   interfaceTocSuffixes: ["_Camelot", "_Mainline", ""],
   wowlessProduct: "wowf",
   wowlessRef: "c695caab195f06367aec63b9c7ac86241b1f390d",
@@ -38,6 +40,8 @@ export const forever: Flavour = {
     "ItemEffect",
     "SpellName",
     "SpellMisc",
+    // Spells' descriptions (an aura's tooltip: lua/spelltext.lua)
+    "Spell",
     "ItemClass",
     "ItemSubClass",
     "Achievement",
@@ -57,5 +61,9 @@ export const forever: Flavour = {
     "SpellAuraOptions",
     "SpellRadius",
     "FactionTemplate",
+    // The spellbook (lua/spellbook.lua): the class's schools and the race's abilities, their spells, the talents left out
+    "SkillLine",
+    "SkillLineAbility",
+    "Talent",
   ],
 };

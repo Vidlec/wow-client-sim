@@ -58,6 +58,8 @@ export class RuntimeMaker {
         ...(JSON.parse(readFileSync(path, "utf8")) as Runtime),
         ...projectRuntime(this.project),
       }));
+      // (a failure is not kept: the next game tries again, the network back say)
+      base.catch(() => this.#bases.delete(locale));
       this.#bases.set(locale, base);
     }
     return base;

@@ -1,7 +1,7 @@
 // The page's own choices that several parts of it share (the panel shown, the zoom, the backdrop, the floating
 // windows), each remembered in this browser (settings.ts). One small store: setPref changes one, usePref reads one.
 import { useSyncExternalStore } from "react";
-import type { Magnify, Renderer } from "../engine/types.ts";
+import type { Magnify } from "../engine/types.ts";
 import { isBoolean, isNumber, isOneOf, isString, readSetting, writeSetting } from "./settings.ts";
 
 export type Place = { left: number; top: number; width?: number; height?: number };
@@ -16,7 +16,6 @@ export type Prefs = {
   isPanelFloating: boolean;
   floatingPlace: Place | null;
   magnify: Magnify;
-  renderer: Renderer;
   worldBackdrop: boolean;
   isVirtualPadOpen: boolean;
   virtualPadPlace: Place | null;
@@ -29,7 +28,6 @@ export type Prefs = {
 
 const isPlaceOrNull = (value: unknown): value is Place | null => value === null || isPlace(value);
 const isMagnify = isOneOf<Magnify>([1, 2, 3, 4]);
-const isRenderer = isOneOf<Renderer>(["gl", "dom"]);
 
 const read = <K extends keyof Prefs>(key: K, fallback: Prefs[K], isValid: (value: unknown) => value is Prefs[K]) =>
   readSetting(key, fallback, isValid);
@@ -41,7 +39,6 @@ let prefs: Prefs = {
   isPanelFloating: read("isPanelFloating", false, isBoolean),
   floatingPlace: read("floatingPlace", null, isPlaceOrNull),
   magnify: read("magnify", 1, isMagnify),
-  renderer: read("renderer", "gl", isRenderer),
   worldBackdrop: read("worldBackdrop", true, isBoolean),
   isVirtualPadOpen: read("isVirtualPadOpen", false, isBoolean),
   virtualPadPlace: read("virtualPadPlace", null, isPlaceOrNull),

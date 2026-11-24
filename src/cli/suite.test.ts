@@ -14,7 +14,6 @@ const project: Project = {
   luaPath: [],
   coverageAddon: "MyAddon",
   login: null,
-  flavour: null,
   galleryDir: null,
 };
 

@@ -8,7 +8,9 @@ local sim = require("sim")
 local W = require("widgets")
 local scene = require("scene")
 
-local function rectOf(frame) return W.computeRect(frame) end
+local function rectOf(frame)
+    return W.computeRect(frame)
+end
 local function centre(frame)
     local rect = rectOf(frame)
     return (rect[1] + rect[3]) / 2, sim.screenHeight - (rect[2] + rect[4]) / 2
@@ -17,7 +19,10 @@ local function drag(frame, dx, dy)
     local x, y = centre(frame)
     scene.input({ type = "move", x = x, y = y })
     scene.input({ type = "down", x = x, y = y, button = "LeftButton" })
-    for step = 1, 10 do scene.input({ type = "move", x = x + dx * step / 10, y = y + dy * step / 10 }); wait(0.02) end
+    for step = 1, 10 do
+        scene.input({ type = "move", x = x + dx * step / 10, y = y + dy * step / 10 })
+        wait(0.02)
+    end
     scene.input({ type = "up", x = x + dx, y = y + dy, button = "LeftButton" })
     wait(0.1)
 end
@@ -55,7 +60,9 @@ expect(manager:HasActiveChanges(), "Edit Mode notes the change")
 local dialog = G.EditModeSystemSettingsDialog
 local slider
 for _, row in ipairs({ dialog.Settings:GetChildren() }) do
-    if row.setting == iconSize then slider = row.Slider and (row.Slider.Slider or row.Slider) end
+    if row.setting == iconSize then
+        slider = row.Slider and (row.Slider.Slider or row.Slider)
+    end
 end
 expect(slider and slider:IsVisible(), "the bar's dialog has its Icon Size slider")
 if slider then
@@ -67,7 +74,10 @@ if slider then
     scene.input({ type = "up", x = rect[3] - 1, y = y, button = "LeftButton" })
     wait(0.1)
 end
-expect(bar:GetSettingValue(iconSize) == 200, "the slider sets the icon size (" .. tostring(bar:GetSettingValue(iconSize)) .. ")")
+expect(
+    bar:GetSettingValue(iconSize) == 200,
+    "the slider sets the icon size (" .. tostring(bar:GetSettingValue(iconSize)) .. ")"
+)
 local bigRect = rectOf(bar)
 expect(bigRect[3] - bigRect[1] > (movedRect[3] - movedRect[1]) * 1.5, "the bar grows with its icons")
 
@@ -86,8 +96,14 @@ click(layoutDialog.AcceptButton)
 wait(0.2)
 expect(not layoutDialog:IsShown(), "the name dialog closes")
 local layouts = G.C_EditMode.GetLayouts()
-expect(#layouts.layouts == 1 and layouts.layouts[1].layoutName == "Mine", "the account keeps the new layout, and only it")
-expect(layouts.activeLayout == #G.EditModePresetLayoutManager:GetCopyOfPresetLayouts() + 1, "and makes it the active one")
+expect(
+    #layouts.layouts == 1 and layouts.layouts[1].layoutName == "Mine",
+    "the account keeps the new layout, and only it"
+)
+expect(
+    layouts.activeLayout == #G.EditModePresetLayoutManager:GetCopyOfPresetLayouts() + 1,
+    "and makes it the active one"
+)
 expect(not manager:HasActiveChanges(), "nothing is left unsaved")
 
 -- Left: everything stays where it was put
@@ -95,6 +111,9 @@ click(manager.CloseButton)
 wait(0.2)
 expect(not manager:IsShown(), "Edit Mode closes")
 local leftRect = rectOf(bar)
-expect(math.abs(leftRect[1] - bigRect[1]) < 1 and math.abs(leftRect[3] - bigRect[3]) < 1, "the bar keeps its place and size")
+expect(
+    math.abs(leftRect[1] - bigRect[1]) < 1 and math.abs(leftRect[3] - bigRect[3]) < 1,
+    "the bar keeps its place and size"
+)
 expect(bar2:IsShown() and bar3:IsShown(), "bars 2 and 3 stay on")
 expect(select(1, G.GetActionBarToggles()) == true, "and the account keeps them on")

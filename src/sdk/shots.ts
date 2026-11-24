@@ -1,37 +1,20 @@
 // Pictures of a scene: the page's own renderer (src/ui/engine/picture.ts, the ?shot= page shots.ts uses too) drawing
-// it in headless Chrome or Edge, which saves a PNG. The page is served here, in this process, with the game's art,
+// it in headless Chrome or Edge (chrome.ts), which saves a PNG. The page is served here, in this process, with the game's art,
 // fonts and atlases (from the cache) and the scene to draw; so a picture needs no server of the page's running.
 // What it costs: Chrome's start and the page's first draw, about a second (Chrome kept running would save half of
 // it; not worth its upkeep for pictures an agent takes now and then).
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import type { Project } from "../project/config.ts";
+import { listAddonSourcesCached } from "../server/addonSources.ts";
 import { Assets } from "../server/assets/index.ts";
 import { CACHE_DIR, type Config } from "../server/config.ts";
+import { findChrome, type PictureOutcome, takePicture } from "./chrome.ts";
 import page from "./shotPage/index.html";
 import type { Scene, ShotOptions, ShotResult } from "./types.ts";
 
 const CHROME_TIMEOUT_MS = 60_000;
-
-const findChrome = (): string | null => {
-  const places =
-    process.platform === "win32"
-      ? [
-          "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-          "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-          "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
-          "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
-        ]
-      : [
-          "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-          "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
-          "/usr/bin/google-chrome",
-          "/usr/bin/chromium",
-          "/usr/bin/chromium-browser",
-        ];
-  return process.env.ADDONSIM_CHROME ?? places.find((path) => existsSync(path)) ?? null;
-};
 
 const notFound = (): Response => new Response("not found", { status: 404 });
 /** Bytes as a body (never in a SharedArrayBuffer here: the body types want a plain ArrayBuffer behind them) */
@@ -52,11 +35,11 @@ export class Shooter {
     this.#art = new Assets(CACHE_DIR, { build: config.build, locale: config.locale ?? "enUS" });
   }
 
-  /** The folder an addon's files are read from for /media: the project's own folder of it, else the AddOns folder */
+  /** The folder an addon's files are read from for /media: wherever the addon is (addonSources.ts) */
   #mediaRoot(path: string): string {
     const name = /^interface[/\\]addons[/\\]([^/\\]+)/i.exec(path)?.[1]?.toLowerCase();
-    const own = this.project.addons.find((addon) => addon.name.toLowerCase() === name);
-    return own ? dirname(own.dir) : this.config.addonsRoot;
+    const source = listAddonSourcesCached(this.config, this.project.addons).get(name ?? "");
+    return source ? dirname(source.dir) : this.config.addonsRoot;
   }
 
   #serve(): ReturnType<typeof Bun.serve> {
@@ -133,42 +116,34 @@ export class Shooter {
     const [x, y, width, height] = options.crop ?? [0, 0, scene.width, scene.height];
     const query = new URLSearchParams({ shot: id, crop: `${x},${y},${width},${height}` });
     if (options.backdrop) query.set("backdrop", options.backdrop);
-    // (ADDONSIM_SHOT_RENDERER=gl: drawn by the GPU's renderer, as the live page draws, to compare the two)
-    if (process.env.ADDONSIM_SHOT_RENDERER === "gl") query.set("renderer", "gl");
     const scale = options.scale ?? 1;
     const out = options.out ? (isAbsolute(options.out) ? options.out : resolve(options.out)) : null;
-    const target = out ?? join(tmpdir(), "addonsim-shots", `shot-${Date.now()}-${this.#nextId}.png`);
+    // (named apart from every other process's: two shooters, each counting from 1, met on one name in one millisecond,
+    // and the second cleared the first's picture before drawing its own)
+    const target =
+      out ??
+      join(
+        tmpdir(),
+        "addonsim-shots",
+        `shot-${Date.now()}-${process.pid}-${this.#nextId}-${crypto.randomUUID().slice(0, 8)}.png`,
+      );
     mkdirSync(dirname(target), { recursive: true });
     rmSync(target, { force: true });
-    // A fresh profile each time: one left behind by another Chrome holds it, and the next waits on it for good
-    const profile = mkdtempSync(join(tmpdir(), "addonsim-chrome-"));
+    let outcome: PictureOutcome;
     try {
-      const child = Bun.spawn(
-        [
-          chrome,
-          "--headless=new",
-          "--disable-gpu",
-          "--hide-scrollbars",
-          "--no-first-run",
-          "--no-default-browser-check",
-          "--disable-extensions",
-          `--user-data-dir=${profile}`,
-          `--window-size=${Math.max(1, Math.round(width))},${Math.max(1, Math.round(height))}`,
-          `--force-device-scale-factor=${scale}`,
-          "--virtual-time-budget=10000",
-          `--screenshot=${target}`,
-          `${server.url.href}?${query.toString()}`,
-        ],
-        { stdin: "ignore", stdout: "ignore", stderr: "ignore", windowsHide: true },
-      );
-      const timer = setTimeout(() => child.kill(), CHROME_TIMEOUT_MS);
-      await child.exited;
-      clearTimeout(timer);
+      outcome = await takePicture({
+        chrome,
+        url: `${server.url.href}?${query.toString()}`,
+        width,
+        height,
+        scale,
+        target,
+        timeoutMs: CHROME_TIMEOUT_MS,
+      });
     } finally {
       this.#scenes.delete(id);
-      rmSync(profile, { recursive: true, force: true, maxRetries: 3 });
     }
-    if (!existsSync(target)) throw new Error(`Chrome drew no picture (${basename(chrome)})`);
+    if (!outcome.isSaved) throw new Error(`Chrome drew no picture (${basename(chrome)}: ${outcome.title})`);
     return {
       path: target,
       width: Math.round(width * scale),

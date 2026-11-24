@@ -21,7 +21,9 @@ end
 ---@return table? item The drawn marker of a unit ("player", "party1"), from the drawing list
 local function findUnitItem(unit)
     for _, item in ipairs(scene.export()) do
-        if type(item.i) == "string" and item.i:match("u" .. unit .. "$") then return item end
+        if type(item.i) == "string" and item.i:match("u" .. unit .. "$") then
+            return item
+        end
     end
 end
 ---@return number x, number y Where a unit should be drawn: its map position on the canvas, as the page counts
@@ -41,18 +43,29 @@ local arrow, dot = findUnitItem("player"), findUnitItem("party1")
 expect(arrow and arrow.atlas == "UI-WorldMapArrow", "the player's arrow is drawn with the game's art")
 expect(isNear(arrow, expectedSpot(1413, "player")), "the arrow stands where the player is")
 expect(arrow and arrow.rot ~= nil, "the arrow turns with the player's facing")
-local red, green, blue = G.GetClassColor("WARRIOR")
-expect(dot and dot.atlas == "WhiteCircle-RaidBlips" and dot.vc and math.abs(dot.vc[1] - red) < 0.01 and math.abs(dot.vc[3] - blue) < 0.01,
-    "Garra's dot is drawn in the warrior's class colour")
-expect(dot and dot.w > 9 and dot.w < 12, "a party member's dot is the party size, not the raid's (" .. tostring(dot and dot.w) .. ")")
+local red, _, blue = G.GetClassColor("WARRIOR")
+expect(
+    dot
+        and dot.atlas == "WhiteCircle-RaidBlips"
+        and dot.vc
+        and math.abs(dot.vc[1] - red) < 0.01
+        and math.abs(dot.vc[3] - blue) < 0.01,
+    "Garra's dot is drawn in the warrior's class colour"
+)
+expect(
+    dot and dot.w > 9 and dot.w < 12,
+    "a party member's dot is the party size, not the raid's (" .. tostring(dot and dot.w) .. ")"
+)
 expect(isNear(dot, expectedSpot(1413, "party1")), "the dot stands where Garra is")
 
 -- On the continent: members are placed by their world position, not their zone's numbers
 map:SetMapID(1414)
 wait(0.5)
 local onKalimdor = G.C_Map.GetPlayerMapPosition(1414, "party1")
-expect(onKalimdor and onKalimdor.x > 0.39 and onKalimdor.x < 0.67 and onKalimdor.y > 0.45 and onKalimdor.y < 0.74,
-    "on Kalimdor, Garra is inside the Barrens")
+expect(
+    onKalimdor and onKalimdor.x > 0.39 and onKalimdor.x < 0.67 and onKalimdor.y > 0.45 and onKalimdor.y < 0.74,
+    "on Kalimdor, Garra is inside the Barrens"
+)
 expect(isNear(findUnitItem("party1"), expectedSpot(1414, "party1")), "on Kalimdor, the dot moves with the map")
 
 -- A quick drag on the zoomed map, as the page sends one: the release right after the last move
@@ -68,5 +81,8 @@ scene.input({ type = "move", x = middleX, y = middleY })
 scene.input({ type = "down", x = middleX, y = middleY, button = "LeftButton" })
 scene.input({ type = "up", x = middleX - 80, y = middleY - 60, button = "LeftButton" })
 wait(0.5)
-expect(container:GetNormalizedHorizontalScroll() > beforeX + 0.01 and container:GetNormalizedVerticalScroll() > beforeY + 0.01,
-    "a quick drag up and left pans the map to show more of its lower right")
+expect(
+    container:GetNormalizedHorizontalScroll() > beforeX + 0.01
+        and container:GetNormalizedVerticalScroll() > beforeY + 0.01,
+    "a quick drag up and left pans the map to show more of its lower right"
+)

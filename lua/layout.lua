@@ -23,15 +23,21 @@ local function cachePath()
 end
 
 local function read()
-    if entries then return entries end
+    if entries then
+        return entries
+    end
     local path = cachePath()
-    if not path then return nil end -- (frames made before the boot knows its folder: the simulator's own)
+    if not path then
+        return nil
+    end -- (frames made before the boot knows its folder: the simulator's own)
     entries = {}
     local file = io.open(path, "rb")
     if file then
         local isRead, value = pcall(json.decode, file:read("*a"))
         file:close()
-        if isRead and type(value) == "table" and type(value.frames) == "table" then entries = value.frames end
+        if isRead and type(value) == "table" and type(value.frames) == "table" then
+            entries = value.frames
+        end
     end
     return entries
 end
@@ -40,12 +46,22 @@ end
 function layout.restore(frame)
     local s = S[frame]
     local name = s and s.name
-    if not name then return end
+    if not name then
+        return
+    end
     local cache = read()
     local entry = cache and cache[name]
-    if type(entry) ~= "table" then return end
+    if type(entry) ~= "table" then
+        return
+    end
     frame:ClearAllPoints()
-    frame:SetPoint(entry.point or "TOPLEFT", sim.G.UIParent, entry.relativePoint or "BOTTOMLEFT", tonumber(entry.x) or 0, tonumber(entry.y) or 0)
+    frame:SetPoint(
+        entry.point or "TOPLEFT",
+        sim.G.UIParent,
+        entry.relativePoint or "BOTTOMLEFT",
+        tonumber(entry.x) or 0,
+        tonumber(entry.y) or 0
+    )
     s.userPlaced = true
 end
 
@@ -54,7 +70,9 @@ end
 ---session (an addon loaded on demand, not loaded), are kept.
 function layout.save()
     local path = cachePath()
-    if not path then return end
+    if not path then
+        return
+    end
     local cache = read() or {}
     for _, frame in ipairs(W.frames) do
         local s = S[frame]
@@ -63,8 +81,12 @@ function layout.save()
             local rect = s.userPlaced and not s.dontSavePosition and W.computeRect(frame)
             if rect then
                 local scale = W.getEffectiveScale(frame)
-                cache[name] = { point = "TOPLEFT", relativePoint = "BOTTOMLEFT",
-                    x = math.floor(rect[1] / scale * 100 + 0.5) / 100, y = math.floor(rect[4] / scale * 100 + 0.5) / 100 }
+                cache[name] = {
+                    point = "TOPLEFT",
+                    relativePoint = "BOTTOMLEFT",
+                    x = math.floor(rect[1] / scale * 100 + 0.5) / 100,
+                    y = math.floor(rect[4] / scale * 100 + 0.5) / 100,
+                }
             else
                 cache[name] = nil
             end

@@ -29,7 +29,6 @@ export const simulatorProject = (): Project => {
     luaPath: [join(scenariosDir, "fixtures", "lib")],
     coverageAddon: addons[0]?.name ?? null,
     login: null,
-    flavour: null,
     galleryDir: null,
   };
 };
@@ -78,10 +77,4 @@ export const takeProjectFlag = (args: string[]): { projectDir: string | null; re
     }
   }
   return { projectDir, rest };
-};
-
-/** Where an addon the project loads lives: the project's own folder for it, else the AddOns folder's */
-export const findAddonDir = (project: Project | null, addonsRoot: string, name: string): string => {
-  const own = project?.addons.find((addon) => addon.name.toLowerCase() === name.toLowerCase());
-  return own ? own.dir : join(addonsRoot, name);
 };

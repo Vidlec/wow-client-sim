@@ -4,13 +4,36 @@ local xml = {}
 
 local ENTITIES = { quot = '"', amp = "&", lt = "<", gt = ">", apos = "'" }
 local function decode(text)
-    return (text:gsub("&(#?x?%w+);", function(entity)
-        if ENTITIES[entity] then return ENTITIES[entity] end
-        local hex = entity:match("^#x(%x+)$")
-        local number = hex and tonumber(hex, 16) or tonumber(entity:match("^#(%d+)$") or "")
-        if number and number < 128 then return string.char(number) end
-        return "&" .. entity .. ";"
-    end))
+    return (
+        text:gsub("&(#?x?%w+);", function(entity)
+            if ENTITIES[entity] then
+                return ENTITIES[entity]
+            end
+            local hex = entity:match("^#x(%x+)$")
+            local number = hex and tonumber(hex, 16) or tonumber(entity:match("^#(%d+)$") or "")
+            if number and number < 128 then
+                return string.char(number)
+            elseif number and number < 0x110000 then
+                -- (written as UTF-8, as the client reads its XML: &#233; is é)
+                if number < 0x800 then
+                    return string.char(0xC0 + math.floor(number / 64), 0x80 + number % 64)
+                elseif number < 0x10000 then
+                    return string.char(
+                        0xE0 + math.floor(number / 4096),
+                        0x80 + math.floor(number / 64) % 64,
+                        0x80 + number % 64
+                    )
+                end
+                return string.char(
+                    0xF0 + math.floor(number / 262144),
+                    0x80 + math.floor(number / 4096) % 64,
+                    0x80 + math.floor(number / 64) % 64,
+                    0x80 + number % 64
+                )
+            end
+            return "&" .. entity .. ";"
+        end)
+    )
 end
 
 ---@return { tag: string, attrs: table, children: table[], text: string? } root A synthetic root holding the top elements
@@ -20,7 +43,9 @@ function xml.parse(content)
     local position, length = 1, #content
     while position <= length do
         local open = content:find("<", position, true)
-        if not open then break end
+        if not open then
+            break
+        end
         if open > position then
             local text = content:sub(position, open - 1)
             if text:match("%S") then
@@ -45,7 +70,9 @@ function xml.parse(content)
             -- Close up to the matching element; a stray closing tag is ignored
             for index = #stack, 2, -1 do
                 if stack[index].tag == tag then
-                    for _ = #stack, index, -1 do table.remove(stack) end
+                    for _ = #stack, index, -1 do
+                        table.remove(stack)
+                    end
                     break
                 end
             end
@@ -57,29 +84,42 @@ function xml.parse(content)
             while true do
                 if quote then
                     local closing = content:find(quote, index, true)
-                    if not closing then index = length + 1; break end
+                    if not closing then
+                        index = length + 1
+                        break
+                    end
                     index, quote = closing + 1, nil
                 else
                     local found = content:find("[>\"']", index)
-                    if not found then index = length + 1; break end
+                    if not found then
+                        index = length + 1
+                        break
+                    end
                     local character = content:sub(found, found)
-                    if character == ">" then index = found; break end
+                    if character == ">" then
+                        index = found
+                        break
+                    end
                     index, quote = found + 1, character
                 end
             end
             local inner = content:sub(open + 1, index - 1)
             local isSelfClosing = inner:sub(-1) == "/"
-            if isSelfClosing then inner = inner:sub(1, -2) end
+            if isSelfClosing then
+                inner = inner:sub(1, -2)
+            end
             local tag = inner:match("^([%w_:%.%-]+)")
             if tag then
                 local element = { tag = tag, attrs = {}, children = {} }
-                for name, valueQuote, value in inner:gmatch("([%w_:%.%-]+)%s*=%s*([\"'])(.-)%2") do
+                for name, _, value in inner:gmatch("([%w_:%.%-]+)%s*=%s*([\"'])(.-)%2") do
                     element.attrs[name] = decode(value)
                 end
                 local parent = stack[#stack]
                 parent.children[#parent.children + 1] = element
                 element.parent = parent
-                if not isSelfClosing then stack[#stack + 1] = element end
+                if not isSelfClosing then
+                    stack[#stack + 1] = element
+                end
             end
             position = index + 1
         end
@@ -91,36 +131,53 @@ end
 -- back on reading)
 local function setParents(element, parent)
     element.parent = parent
-    for _, child in ipairs(element.children) do setParents(child, element) end
+    for _, child in ipairs(element.children) do
+        setParents(child, element)
+    end
 end
 local function clearParents(element)
     element.parent = nil
-    for _, child in ipairs(element.children) do clearParents(child) end
+    for _, child in ipairs(element.children) do
+        clearParents(child)
+    end
 end
 
 ---Parses a file, the tree kept between runs while the file is unchanged (bootcache).
 function xml.parseFile(path)
     local function read()
         local file = io.open(path, "rb")
-        if not file then return nil end
+        if not file then
+            return nil
+        end
         local content = file:read("*a")
         file:close()
         return content
     end
-    local root = require("bootcache").rememberFile("xml-" .. (path:match("([^/\\]+)$") or "file"), path, read, function(content)
-        if content:sub(1, 3) == "\239\187\191" then content = content:sub(4) end
-        local tree = xml.parse(content)
-        clearParents(tree)
-        return tree
-    end)
-    if root then setParents(root, nil) end
+    local root = require("bootcache").rememberFile(
+        "xml-" .. (path:match("([^/\\]+)$") or "file"),
+        path,
+        read,
+        function(content)
+            if content:sub(1, 3) == "\239\187\191" then
+                content = content:sub(4)
+            end
+            local tree = xml.parse(content)
+            clearParents(tree)
+            return tree
+        end
+    )
+    if root then
+        setParents(root, nil)
+    end
     return root
 end
 
 ---@return table? child The first child with this tag
 function xml.child(element, tag)
     for _, child in ipairs(element.children) do
-        if child.tag == tag then return child end
+        if child.tag == tag then
+            return child
+        end
     end
 end
 

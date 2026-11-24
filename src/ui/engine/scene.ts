@@ -1,7 +1,7 @@
 // The scene as the page holds it: the items in drawing order, and each by its key (k .. i). The server sends a whole
 // scene, then frames of what changed: the items new or changed, and the order when it changed. An item that did not
 // change stays the same object from frame to frame (the renderers' caches go by it).
-import type { SceneFrame, SceneItem, SceneItems } from "./items.ts";
+import type { SceneFrame, SceneItem, SceneItems, SceneMove } from "./items.ts";
 
 export const itemKey = (item: SceneItem): string => item.k + item.i;
 
@@ -26,6 +26,21 @@ export const createScene = (): Scene => {
       const key = itemKey(item);
       byKey.set(key, item);
       indexByKey.set(key, index);
+    }
+  };
+
+  // A moved item: a new object with its new boxes (the renderers' caches go by the object), in its place
+  const applyMoves = (moves: readonly SceneMove[]): void => {
+    for (const [key, x, y, w, h, clip, masks] of moves) {
+      const held = byKey.get(key);
+      if (!held || !("w" in held)) continue;
+      const moved = { ...held, x, y, w, h } as SceneItem & { cl?: unknown; mk?: readonly { b: unknown }[] };
+      if (clip === 0) delete moved.cl;
+      else moved.cl = clip;
+      if (masks !== 0 && moved.mk) moved.mk = moved.mk.map((mask, index) => ({ ...mask, b: masks[index] ?? mask.b }));
+      byKey.set(key, moved);
+      const index = indexByKey.get(key);
+      if (index !== undefined) items[index] = moved;
     }
   };
 
@@ -55,6 +70,7 @@ export const createScene = (): Scene => {
         return true;
       }
       if (!frame.delta) return false;
+      if (frame.mv) applyMoves(frame.mv);
       applyDelta(frame.u ?? [], frame.o);
       return true;
     },

@@ -1,0 +1,3 @@
+# Third-party Lua kept as its authors wrote it
+lua/vendor/
+node_modules/

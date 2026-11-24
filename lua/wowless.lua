@@ -17,22 +17,33 @@ local G = sim.G
 local function readJson(path)
     local function read()
         local file = io.open(path, "rb")
-        if not file then return nil end
+        if not file then
+            return nil
+        end
         local content = file:read("*a")
         file:close()
         return content
     end
-    local kept = require("bootcache").rememberFile("wowless-" .. (path:match("([^/\\]+)$") or "json"), path, read, function(content)
-        local isRead, value = pcall(json.decode, content)
-        return { value = isRead and value or nil }
-    end)
+    local kept = require("bootcache").rememberFile(
+        "wowless-" .. (path:match("([^/\\]+)$") or "json"),
+        path,
+        read,
+        function(content)
+            local isRead, value = pcall(json.decode, content)
+            return { value = isRead and value or nil }
+        end
+    )
     return kept and kept.value
 end
 
 local function copy(value)
-    if type(value) ~= "table" then return value end
+    if type(value) ~= "table" then
+        return value
+    end
     local result = {}
-    for key, item in pairs(value) do result[key] = copy(item) end
+    for key, item in pairs(value) do
+        result[key] = copy(item)
+    end
     return result
 end
 
@@ -43,39 +54,70 @@ local structures = {}
 ---an object whose every method is a noted stand-in doing nothing
 local function makeLuaObject(typeName)
     local docs = require("docs")
-    for _, name in ipairs({ typeName, (typeName:gsub("^Lua", "")), (typeName:gsub("Object$", "")), (typeName:gsub("^Lua", ""):gsub("Object$", "")) }) do
-        if docs.knowsObject and docs.knowsObject(name) then return docs.makeObject(name) end
+    for _, name in ipairs({
+        typeName,
+        (typeName:gsub("^Lua", "")),
+        (typeName:gsub("Object$", "")),
+        (typeName:gsub("^Lua", ""):gsub("Object$", "")),
+    }) do
+        if docs.knowsObject and docs.knowsObject(name) then
+            return docs.makeObject(name)
+        end
     end
-    return setmetatable({}, { __index = function(object, key)
-        local method = function() sim.noteStub(typeName .. ":" .. tostring(key)) end
-        rawset(object, key, method)
-        return method
-    end })
+    return setmetatable({}, {
+        __index = function(object, key)
+            local method = function()
+                sim.noteStub(typeName .. ":" .. tostring(key))
+            end
+            rawset(object, key, method)
+            return method
+        end,
+    })
 end
 
 ---The value a stand-in gives for one of wowless's described values: its stub when it names one, else the empty
 ---value of its type (a structure with its fields that are always there, an enumeration's lowest value)
 local function defaultFor(spec, depth)
-    if type(spec) ~= "table" or spec.nilable then return nil end
+    if type(spec) ~= "table" or spec.nilable then
+        return nil
+    end
     -- A list wowless stubs as nil is still a list in the client: the game's code walks C_NamePlate.GetNamePlates with
     -- pairs as it loads
-    if spec.stubnil then return type(spec.type) == "table" and spec.type.arrayof and {} or nil end
-    if spec.stub ~= nil then return copy(spec.stub) end
+    if spec.stubnil then
+        return type(spec.type) == "table" and spec.type.arrayof and {} or nil
+    end
+    if spec.stub ~= nil then
+        return copy(spec.stub)
+    end
     local valueType = spec.type
-    if valueType == "number" then return 0 end
-    if valueType == "boolean" then return false end
-    if valueType == "string" then return "" end
-    if valueType == "table" then return {} end
+    if valueType == "number" then
+        return 0
+    end
+    if valueType == "boolean" then
+        return false
+    end
+    if valueType == "string" then
+        return ""
+    end
+    if valueType == "table" then
+        return {}
+    end
     if type(valueType) == "table" then
-        if valueType.arrayof then return {} end
+        if valueType.arrayof then
+            return {}
+        end
         if valueType.enum then
             local values, lowest = rawget(G.Enum or {}, valueType.enum), nil
             for _, value in pairs(type(values) == "table" and values or {}) do
-                if type(value) == "number" and (lowest == nil or value < lowest) then lowest = value end
+                if type(value) == "number" and (lowest == nil or value < lowest) then
+                    lowest = value
+                end
             end
             return lowest
         end
-        if valueType.luaobject then return makeLuaObject(valueType.luaobject) end
+        if valueType.luaobject then
+            return makeLuaObject(valueType.luaobject)
+        end
         local structure = valueType.structure and structures[valueType.structure]
         if structure and (depth or 0) < 5 then
             local value = {}
@@ -88,7 +130,9 @@ local function defaultFor(spec, depth)
             local mixin = structure.mixin and rawget(G, structure.mixin)
             if type(mixin) == "table" then
                 for name, method in pairs(mixin) do
-                    if value[name] == nil then value[name] = method end
+                    if value[name] == nil then
+                        value[name] = method
+                    end
                 end
             end
             return value
@@ -106,7 +150,9 @@ local function makeStandIn(fullName, spec)
         sim.noteStub(fullName)
         -- Nothing when the client may give nothing: for a character with nothing going on that is its answer (an
         -- alternate power bar's info, an aura), and a made-up something makes the game show bars for it
-        if spec.stubnothing or spec.mayreturnnothing then return end
+        if spec.stubnothing or spec.mayreturnnothing then
+            return
+        end
         local values, count = {}, 0
         local fixedCount = #outputs - (strideLength > 0 and strideLength or 0)
         for index = 1, fixedCount do
@@ -130,14 +176,20 @@ local fieldValues = setmetatable({}, { __mode = "k" })
 local function collectMethods(uiobjects, typeName, methods, fields, seen)
     methods, fields, seen = methods or {}, fields or {}, seen or {}
     local spec = uiobjects[typeName]
-    if type(spec) ~= "table" or seen[typeName] then return methods, fields end
+    if type(spec) ~= "table" or seen[typeName] then
+        return methods, fields
+    end
     seen[typeName] = true
     -- (an empty map reads as true from wowless's YAML)
     for name, method in pairs(type(spec.methods) == "table" and spec.methods or {}) do
-        if methods[name] == nil then methods[name] = method end
+        if methods[name] == nil then
+            methods[name] = method
+        end
     end
     for name, field in pairs(type(spec.fields) == "table" and spec.fields or {}) do
-        if fields[name] == nil then fields[name] = field end
+        if fields[name] == nil then
+            fields[name] = field
+        end
     end
     for parentName in pairs(type(spec.inherits) == "table" and spec.inherits or {}) do
         collectMethods(uiobjects, parentName, methods, fields, seen)
@@ -151,24 +203,32 @@ local function makeWidgetMethod(typeName, methodName, spec, fields)
     local impl = type(spec.impl) == "table" and spec.impl or {}
     if type(impl.getter) == "table" then
         local names = {}
-        for index, entry in ipairs(impl.getter) do names[index] = entry.name end
+        for index, entry in ipairs(impl.getter) do
+            names[index] = entry.name
+        end
         return function(self)
             local values = fieldValues[self] or {}
             local results = {}
             for index, name in ipairs(names) do
                 local value = values[name]
-                if value == nil and fields[name] then value = fields[name].init end
+                if value == nil and fields[name] then
+                    value = fields[name].init
+                end
                 results[index] = value
             end
             return unpack(results, 1, #names)
         end
     elseif type(impl.setter) == "table" then
         local names = {}
-        for index, entry in ipairs(impl.setter) do names[index] = entry.name end
+        for index, entry in ipairs(impl.setter) do
+            names[index] = entry.name
+        end
         return function(self, ...)
             local values = fieldValues[self] or {}
             fieldValues[self] = values
-            for index, name in ipairs(names) do values[name] = (select(index, ...)) end
+            for index, name in ipairs(names) do
+                values[name] = (select(index, ...))
+            end
         end
     end
     return makeStandIn(typeName .. ":" .. methodName, spec)
@@ -210,8 +270,12 @@ end
 function wowless.apply(root, config, isWholeInterface)
     local folder = wowless.folder(root, config)
     local apis = readJson(folder .. "/apis.json")
-    if not apis then return nil end
-    for name, structure in pairs(readJson(folder .. "/structures.json") or {}) do structures[name] = structure end
+    if not apis then
+        return nil
+    end
+    for name, structure in pairs(readJson(folder .. "/structures.json") or {}) do
+        structures[name] = structure
+    end
     local summary = { replaced = 0, added = 0, cvars = 0, constants = 0, secureNamespaces = 0 }
 
     -- Console variables: the client's names are case-blind, wowless writes them in lower case
@@ -268,9 +332,13 @@ function wowless.apply(root, config, isWholeInterface)
                 rawset(G, namespace, target)
             end
             if getmetatable(target) == nil then
-                setmetatable(target, { __index = function(_, key)
-                    return sim.markStandIn(function() sim.noteStub(namespace .. "." .. tostring(key)) end)
-                end })
+                setmetatable(target, {
+                    __index = function(_, key)
+                        return sim.markStandIn(function()
+                            sim.noteStub(namespace .. "." .. tostring(key))
+                        end)
+                    end,
+                })
             end
             sim.secureOnlyNamespaces = sim.secureOnlyNamespaces or {}
             sim.secureOnlyNamespaces[namespace] = true
@@ -280,7 +348,9 @@ function wowless.apply(root, config, isWholeInterface)
 
     sim.secureOnlyFunctions = sim.secureOnlyFunctions or {}
     for fullName, spec in pairs(apis) do
-        if type(spec) == "table" and spec.secureonly and type(fullName) == "string" then sim.secureOnlyFunctions[fullName] = true end
+        if type(spec) == "table" and spec.secureonly and type(fullName) == "string" then
+            sim.secureOnlyFunctions[fullName] = true
+        end
         if type(spec) == "table" and type(fullName) == "string" then
             local namespace, functionName = fullName:match("^([%w_]+)%.([%w_]+)$")
             local target = G

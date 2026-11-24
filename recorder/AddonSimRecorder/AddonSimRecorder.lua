@@ -121,17 +121,23 @@ local function getMethods(object)
     return methods
 end
 
+-- The numbers in _G as this addon loads: the client's own and the game's interface's, before the other addons (which
+-- load after this one, by name) add their own globals
+local numbersAtLoad = {}
+for name, value in pairs(_G) do
+    if type(name) == "string" and type(value) == "number" then numbersAtLoad[name] = value end
+end
+
 local function recordApi()
     local version, build = GetBuildInfo()
     local api = { client = version, build = build, interface = select(4, GetBuildInfo()), recordedAt = date("%Y-%m-%d %H:%M"),
         globals = {}, namespaces = {}, widgets = {} }
-    -- The client's numeric constants too (LE_LFG_CATEGORY_LFD, NUM_LE_LFG_CATEGORYS...): numbers and true/false only,
-    -- never text (that is the game's strings, which the simulator reads from its own tables)
+    -- The client's numeric constants too (LE_LFG_CATEGORY_LFD, NUM_LE_LFG_CATEGORYS...): numbers only, as they were
+    -- when this addon loaded (never true/false: those are flags the game's code sets, g_middleClassLoaded; never
+    -- text: the game's strings, which the simulator reads from its own tables; never another addon's)
     api.constants = {}
-    for name, value in pairs(_G) do
-        if type(name) == "string" and (type(value) == "number" or type(value) == "boolean") then
-            api.constants[name] = value
-        end
+    for name, value in pairs(numbersAtLoad) do
+        api.constants[name] = value
     end
     for name, value in pairs(_G) do
         if type(name) == "string" then
@@ -174,6 +180,22 @@ local function recordApi()
                 end
             end
         end
+    end
+    -- Every enumeration and constants table with its values (Enum.GameRule and others the documentation leaves out:
+    -- the simulator makes up numbers for those until it has the client's)
+    api.enums, api.constantTables = {}, {}
+    local function numbersOf(source)
+        local values = {}
+        for key, value in pairs(source) do
+            if type(key) == "string" and (type(value) == "number" or type(value) == "boolean" or type(value) == "string") then values[key] = value end
+        end
+        return values
+    end
+    for name, enum in pairs(Enum or {}) do
+        if type(name) == "string" and type(enum) == "table" then api.enums[name] = numbersOf(enum) end
+    end
+    for name, group in pairs(Constants or {}) do
+        if type(name) == "string" and type(group) == "table" then api.constantTables[name] = numbersOf(group) end
     end
     AddonSimRecording.api = api
     local namespaceCount = 0
@@ -492,6 +514,314 @@ PROBES.tooltips = function()
     tooltip:ClearLines()
     result.shownAfterClearLines = tooltip:IsShown()
     tooltip:Hide()
+    return result
+end
+
+-- What Raise and a toplevel window shown do, read a moment later as well (the client may apply them on its next
+-- frame), and which frame the client puts on top under the mouse (GetMouseFoci, topmost first): a frame of a high
+-- level against a toplevel window of a low one shown after it, and a plain low one raised. The frames are placed under
+-- the cursor, mouse-enabled, for a moment.
+PROBES.raiseOrder = function()
+    local strata = "FULLSCREEN_DIALOG"
+    local scale = UIParent:GetEffectiveScale()
+    local cursorX, cursorY = GetCursorPosition()
+    local function make(name, level, isToplevel)
+        local made = CreateFrame("Frame", name, UIParent)
+        made:SetFrameStrata(strata)
+        made:SetSize(60, 60)
+        made:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale)
+        made:EnableMouse(true)
+        if isToplevel then made:SetToplevel(true) end
+        made:SetFrameLevel(level)
+        return made
+    end
+    local high = make("AddonSimProbeHigh", 30)
+    local window = make("AddonSimProbeWindow", 2, true)
+    window:Hide()
+    local plain = make("AddonSimProbePlain", 2)
+    window:Show()
+    local function levels()
+        return { high = high:GetFrameLevel(), window = window:GetFrameLevel(), plain = plain:GetFrameLevel() }
+    end
+    local function foci()
+        local names = {}
+        local list = GetMouseFoci and GetMouseFoci() or { GetMouseFocus and GetMouseFocus() }
+        for index, focus in ipairs(list or {}) do
+            names[index] = focus.GetName and focus:GetName() or "?"
+        end
+        return names
+    end
+    local result = { atOnce = levels(), cursor = { cursorX, cursorY } }
+    C_Timer.After(0.2, function()
+        result.later = levels()
+        result.fociWindowShown = foci()
+        plain:Raise()
+        result.afterPlainRaiseAtOnce = levels()
+        C_Timer.After(0.2, function()
+            result.afterPlainRaiseLater = levels()
+            result.fociPlainRaised = foci()
+            for _, frame in ipairs({ high, window, plain }) do frame:Hide() end
+        end)
+    end)
+    return result
+end
+-- The mouse's channels: motion alone on after the mouse is turned off (EllesmereUI's chat overlay), clicks after
+-- EnableMouse, and whether textures take EnableMouseMotion
+PROBES.mouseChannels = function()
+    local result = {}
+    local motionOnly = CreateFrame("Frame", nil, UIParent)
+    motionOnly:EnableMouse(false)
+    if motionOnly.SetMouseClickEnabled then motionOnly:SetMouseClickEnabled(false) end
+    if motionOnly.SetMouseMotionEnabled then motionOnly:SetMouseMotionEnabled(true) end
+    result.motionOnly = { mouse = motionOnly:IsMouseEnabled(), motion = answers(motionOnly.IsMouseMotionEnabled, motionOnly),
+        click = answers(motionOnly.IsMouseClickEnabled, motionOnly) }
+    local reset = CreateFrame("Frame", nil, UIParent)
+    if reset.SetMouseClickEnabled then reset:SetMouseClickEnabled(false) end
+    reset:EnableMouse(true)
+    result.clickOffThenEnableMouse = { click = answers(reset.IsMouseClickEnabled, reset), motion = answers(reset.IsMouseMotionEnabled, reset) }
+    local texture = UIParent:CreateTexture()
+    result.textureHasEnableMouseMotion = texture.EnableMouseMotion ~= nil
+    result.textureHasHookScript = texture.HookScript ~= nil
+    result.textureHasOnShow = answers(texture.HasScript, texture, "OnShow")
+    motionOnly:Hide()
+    reset:Hide()
+    texture:Hide()
+    return result
+end
+-- What the client answers for this character and world: the questions the simulator answers by guess or by its own
+-- model (specializations, the social window, game rules, forms, overrides, the systems this world lacks...)
+PROBES.worldAnswers = function()
+    local result = {}
+    local function ask(name, fn, ...)
+        result[name] = fn and answers(fn, ...) or "missing"
+    end
+    local _, _, classId = UnitClass("player")
+    -- Specializations
+    if C_SpecializationInfo then
+        ask("GetSpecialization", C_SpecializationInfo.GetSpecialization)
+        ask("GetSpecializationInfo1", C_SpecializationInfo.GetSpecializationInfo, 1, false, false)
+        ask("GetNumSpecializationsForClassID", C_SpecializationInfo.GetNumSpecializationsForClassID, classId)
+    end
+    ask("GetNumSpecializations", GetNumSpecializations)
+    -- Every class's specializations (the simulator gives each class its own)
+    result.classId = classId
+    result.specializations = {}
+    -- (a global in this client, GetSpecializationInfoForClassID(classID, index [, sex]); the namespace has none)
+    local infoForClass = GetSpecializationInfoForClassID
+        or (C_SpecializationInfo and C_SpecializationInfo.GetSpecializationInfoForClassID)
+    local countForClass = (C_SpecializationInfo and C_SpecializationInfo.GetNumSpecializationsForClassID)
+        or GetNumSpecializationsForClassID
+    result.hasSpecializationInfoForClassID = infoForClass ~= nil
+    if infoForClass then
+        for id = 1, 13 do
+            local isCounted, count = pcall(countForClass or function() return 1 end, id)
+            count = isCounted and tonumber(count) or 1
+            if count > 0 then
+                result.specializations[tostring(id)] = answers(infoForClass, id, 1)
+            end
+        end
+    end
+    ask("GetSpecializationRole1", GetSpecializationRole, 1)
+    -- The social window, Battle.net, friends
+    ask("C_SocialUI.IsSystemEnabled", C_SocialUI and C_SocialUI.IsSystemEnabled)
+    result.hasSocialUIFrame = SocialUIFrame ~= nil
+    ask("C_RecruitAFriend.IsSystemEnabled", C_RecruitAFriend and C_RecruitAFriend.IsSystemEnabled)
+    ask("BNGetInfo", BNGetInfo)
+    ask("BNConnected", BNConnected)
+    ask("BNFeaturesEnabled", BNFeaturesEnabled)
+    ask("GetNumFriends", C_FriendList and C_FriendList.GetNumFriends)
+    -- Game rules: every one this client names, and which are on
+    result.gameRules, result.activeGameRules = {}, {}
+    for name, value in pairs(Enum and Enum.GameRule or {}) do
+        result.gameRules[name] = value
+        local isRead, isActive = pcall(C_GameRules.IsGameRuleActive, value)
+        if isRead and isActive then result.activeGameRules[#result.activeGameRules + 1] = name end
+    end
+    -- Forms and stances
+    ask("GetNumShapeshiftForms", GetNumShapeshiftForms)
+    ask("GetShapeshiftForm", GetShapeshiftForm)
+    ask("GetShapeshiftFormID", GetShapeshiftFormID)
+    result.forms = {}
+    for index = 1, 10 do
+        local info = answers(GetShapeshiftFormInfo, index)
+        if info.count and info.count > 0 and info[1] ~= nil then
+            result.forms[index] = { info = info, cooldown = answers(GetShapeshiftFormCooldown, index) }
+        end
+    end
+    -- Spells: Attack (6603) and the first spell of the spell book
+    for _, spellId in ipairs({ 6603 }) do
+        ask("GetBaseSpell " .. spellId, C_Spell.GetBaseSpell, spellId)
+        ask("GetOverrideSpell " .. spellId, C_Spell.GetOverrideSpell, spellId)
+        ask("FindSpellOverrideByID " .. spellId, C_SpellBook and C_SpellBook.FindSpellOverrideByID, spellId)
+        ask("IsSpellKnownOrInSpellBook " .. spellId, C_SpellBook and C_SpellBook.IsSpellKnownOrInSpellBook, spellId)
+        ask("IsPressHoldReleaseSpell " .. spellId, C_Spell.IsPressHoldReleaseSpell, spellId)
+        ask("IsSpellOverlayed " .. spellId, C_SpellActivationOverlay and C_SpellActivationOverlay.IsSpellOverlayed, spellId)
+    end
+    -- The first quest in the log: its difficulty, completion text, waypoint
+    local questId = C_QuestLog.GetQuestIDForLogIndex and C_QuestLog.GetQuestIDForLogIndex(1)
+    if questId and questId > 0 then
+        result.firstQuest = questId
+        ask("GetQuestDifficultyLevel", C_QuestLog.GetQuestDifficultyLevel, questId)
+        ask("GetContentDifficultyQuestForPlayer", C_PlayerInfo and C_PlayerInfo.GetContentDifficultyQuestForPlayer, questId)
+        ask("GetQuestLogCompletionText1", GetQuestLogCompletionText, 1)
+        ask("GetNextWaypointText", C_QuestLog.GetNextWaypointText, questId)
+        ask("IsCampaignQuest", C_CampaignInfo and C_CampaignInfo.IsCampaignQuest, questId)
+    end
+    -- Units
+    ask("UnitIsPlayerControlledOrGroupMember", UnitIsPlayerControlledOrGroupMember, "player")
+    ask("CanInspectPlayer", CanInspect, "player")
+    ask("UnitInVehicle", UnitInVehicle, "player")
+    ask("UnitPhaseReason", UnitPhaseReason, "player")
+    ask("HasIncomingSummon", C_IncomingSummon and C_IncomingSummon.HasIncomingSummon, "player")
+    ask("UnitHasIncomingResurrection", UnitHasIncomingResurrection, "player")
+    ask("UnitIsGroupAssistant", UnitIsGroupAssistant, "player")
+    ask("GetRaidTargetIndex", GetRaidTargetIndex, "player")
+    for status = 0, 3 do ask("GetThreatStatusColor " .. status, GetThreatStatusColor, status) end
+    ask("GetAverageItemLevel", GetAverageItemLevel)
+    ask("GetInspectItemLevel", C_PaperDollInfo and C_PaperDollInfo.GetInspectItemLevel, "player")
+    -- Health and heal prediction
+    ask("UnitGetTotalAbsorbs", UnitGetTotalAbsorbs, "player")
+    ask("UnitGetTotalHealAbsorbs", UnitGetTotalHealAbsorbs, "player")
+    ask("UnitGetIncomingHeals", UnitGetIncomingHeals, "player")
+    ask("GetUnitTotalModifiedMaxHealthPercent", GetUnitTotalModifiedMaxHealthPercent, "player")
+    if CreateUnitHealPredictionCalculator and UnitGetDetailedHealPrediction then
+        local calculator = CreateUnitHealPredictionCalculator()
+        result.calculatorDefaults = {
+            damageAbsorbClamp = answers(calculator.GetDamageAbsorbClampMode, calculator),
+            healAbsorbClamp = answers(calculator.GetHealAbsorbClampMode, calculator),
+            healAbsorbMode = answers(calculator.GetHealAbsorbMode, calculator),
+            incomingHealClamp = answers(calculator.GetIncomingHealClampMode, calculator),
+            maximumHealthMode = answers(calculator.GetMaximumHealthMode, calculator),
+        }
+        UnitGetDetailedHealPrediction("player", nil, calculator)
+        result.predictedValues = answers(calculator.GetPredictedValues, calculator)
+        result.calculatorMaximumHealth = answers(calculator.GetMaximumHealth, calculator)
+    end
+    -- The realm, the client, settings
+    ask("GetGameTime", GetGameTime)
+    result.localTime = date("%H:%M")
+    ask("GetRealmID", GetRealmID)
+    ask("IsPublicTestClient", IsPublicTestClient)
+    ask("HasNewMail", HasNewMail)
+    ask("IsUsingGamepad", IsUsingGamepad)
+    ask("GetCVarInfo countdownForCooldowns", C_CVar.GetCVarInfo, "countdownForCooldowns")
+    ask("GetCVarBitfield closedInfoFrames 1", C_CVar.GetCVarBitfield, "closedInfoFrames", 1)
+    result.closedInfoFrames = GetCVar("closedInfoFrames")
+    ask("GetBindingByKey W", C_KeyBindings and C_KeyBindings.GetBindingByKey, "W")
+    ask("GetMacroIndexByName none", GetMacroIndexByName, "AddonSimNoSuchMacro")
+    -- Systems the simulated world has none of
+    ask("IsOnGarrisonMap", C_Garrison and C_Garrison.IsOnGarrisonMap)
+    ask("IsHouseEditorActive", C_HouseEditor and C_HouseEditor.IsHouseEditorActive)
+    ask("IsInBattle", C_PetBattles and C_PetBattles.IsInBattle)
+    ask("IsChallengeModeActive", C_ChallengeMode and C_ChallengeMode.IsChallengeModeActive)
+    ask("IsMatchActive", C_PvP and C_PvP.IsMatchActive)
+    ask("IsInLFGFollowerDungeon", C_LFGInfo and C_LFGInfo.IsInLFGFollowerDungeon)
+    ask("ShouldAurasBeSecret", C_Secrets and C_Secrets.ShouldAurasBeSecret)
+    ask("EJ_GetCurrentTier", EJ_GetCurrentTier)
+    ask("GetNumSavedInstances", GetNumSavedInstances)
+    ask("GetCurrencyListSize", C_CurrencyInfo and C_CurrencyInfo.GetCurrencyListSize)
+    ask("GetEquipmentSetIDs", C_EquipmentSet and C_EquipmentSet.GetEquipmentSetIDs)
+    ask("GetAllProfessionTradeSkillLines", C_TradeSkillUI and C_TradeSkillUI.GetAllProfessionTradeSkillLines)
+    ask("GetNamePlateSize", C_NamePlate and C_NamePlate.GetNamePlateSize)
+    -- Global names addons read: which this client has
+    result.globals = {}
+    for _, name in ipairs({ "AWAY", "BUSY", "STATICPOPUP_NUMDIALOGS", "LFG_LIST_APP_DELISTED", "GROUP_FINDER_CATEGORY_ID_DELVES",
+        "GROUP_FINDER_CUSTOM_CATEGORY", "EUI_CLIENT_BLOCKED" }) do
+        result.globals[name] = type(_G[name])
+    end
+    return result
+end
+-- Widgets' answers the simulator models: desaturation, sprite cells, a code-made string with no points, the alpha
+-- gradient's answer, status bars' and cooldowns' defaults, text insets, flattened layers
+PROBES.widgetAnswers = function()
+    local result = {}
+    local holder = CreateFrame("Frame", nil, UIParent)
+    local texture = holder:CreateTexture()
+    texture:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+    if texture.SetDesaturation then
+        texture:SetDesaturation(0.4)
+        result.desaturation04 = { amount = answers(texture.GetDesaturation, texture), isDesaturated = answers(texture.IsDesaturated, texture) }
+    end
+    if texture.SetSpriteSheetCell then
+        texture:SetSpriteSheetCell(6, 4, 4)
+        result.spriteCell6of4x4 = answers(texture.GetTexCoord, texture)
+    end
+    local loose = holder:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    loose:SetText("Hello")
+    result.looseString = { rect = answers(loose.GetRect, loose), left = answers(loose.GetLeft, loose), visible = loose:IsVisible(),
+        width = answers(loose.GetStringWidth, loose) }
+    if loose.SetAlphaGradient then
+        result.alphaGradient = { within = answers(loose.SetAlphaGradient, loose, 2, 10), atEnd = answers(loose.SetAlphaGradient, loose, 5, 10),
+            past = answers(loose.SetAlphaGradient, loose, 100, 10) }
+    end
+    result.flattensDefault = answers(holder.GetFlattensRenderLayers, holder)
+    local bar = CreateFrame("StatusBar", nil, holder)
+    result.statusBar = { fillStyle = answers(bar.GetFillStyle, bar), reverseFill = answers(bar.GetReverseFill, bar),
+        rotatesTexture = answers(bar.GetRotatesTexture, bar), orientation = answers(bar.GetOrientation, bar) }
+    local cooldown = CreateFrame("Cooldown", nil, holder)
+    result.cooldown = { drawSwipe = answers(cooldown.GetDrawSwipe, cooldown), drawEdge = answers(cooldown.GetDrawEdge, cooldown),
+        drawBling = answers(cooldown.GetDrawBling, cooldown), edgeScale = answers(cooldown.GetEdgeScale, cooldown),
+        reverse = answers(cooldown.GetReverse, cooldown), hidingNumbers = answers(cooldown.IsHidingCountdownNumbers, cooldown),
+        countdownCVar = GetCVar("countdownForCooldowns") }
+    local templated = CreateFrame("Cooldown", nil, holder, "CooldownFrameTemplate")
+    result.cooldownTemplate = { drawEdge = answers(templated.GetDrawEdge, templated), drawBling = answers(templated.GetDrawBling, templated) }
+    local box = CreateFrame("EditBox", nil, holder)
+    box:SetTextInsets(1, 2, 3, 4)
+    result.textInsets = answers(box.GetTextInsets, box)
+    holder:Hide()
+    return result
+end
+-- Animations: what GetAlpha says while an Alpha animation plays on a frame of alpha 0.5; Play on a playing group
+-- (started again?); setToFinalAlpha; durations, a timer bar and a cooldown from a duration
+PROBES.animations = function()
+    local result = {}
+    local holder = CreateFrame("Frame", nil, UIParent)
+    holder:SetSize(10, 10)
+    holder:SetPoint("CENTER")
+    holder:SetAlpha(0.5)
+    local group = holder:CreateAnimationGroup()
+    local fade = group:CreateAnimation("Alpha")
+    fade:SetFromAlpha(1)
+    fade:SetToAlpha(0)
+    fade:SetDuration(1)
+    group:Play()
+    result.hookScript = answers(group.HookScript, group, "OnFinished", function() end)
+    C_Timer.After(0.4, function()
+        result.midway = { alpha = holder:GetAlpha(), effective = holder:GetEffectiveAlpha(), elapsed = answers(group.GetElapsed, group),
+            progress = answers(fade.GetProgress, fade) }
+        group:Play()
+        result.afterSecondPlay = { elapsed = answers(group.GetElapsed, group), playing = group:IsPlaying() }
+        C_Timer.After(0.8, function()
+            result.afterSecondPlayLater = { playing = group:IsPlaying(), alpha = holder:GetAlpha() }
+            group:SetToFinalAlpha(true)
+            group:Restart()
+            C_Timer.After(1.2, function()
+                result.afterFinalAlpha = { alpha = holder:GetAlpha(), playing = group:IsPlaying() }
+                holder:Hide()
+            end)
+        end)
+    end)
+    -- Durations
+    if C_DurationUtil and C_DurationUtil.CreateDuration then
+        local duration = C_DurationUtil.CreateDuration()
+        result.durationDefault = { isZero = answers(duration.IsZero, duration), hasExpired = answers(duration.HasExpired, duration),
+            isActive = answers(duration.IsActive, duration), total = answers(duration.GetTotalDuration, duration) }
+        duration:SetTimeFromStart(GetTime(), 10)
+        result.durationStarted = { elapsed = answers(duration.GetElapsedDuration, duration), remainingPercent = answers(duration.GetRemainingPercent, duration),
+            isActive = answers(duration.IsActive, duration), endTime = answers(duration.GetEndTime, duration), now = GetTime() }
+        local bar = CreateFrame("StatusBar", nil, holder)
+        bar:SetMinMaxValues(0, 10)
+        if bar.SetTimerDuration then bar:SetTimerDuration(duration) end
+        local cooldown = CreateFrame("Cooldown", nil, holder)
+        if cooldown.SetCooldownFromDurationObject then
+            cooldown:SetCooldownFromDurationObject(duration)
+            result.cooldownFromDuration = answers(cooldown.GetCooldownTimes, cooldown)
+        end
+        C_Timer.After(0.5, function()
+            result.timerBarValue = { value = bar:GetValue(), interpolating = answers(bar.IsInterpolating, bar) }
+        end)
+    end
+    result.channelDuration = answers(UnitChannelDuration, "player")
     return result
 end
 

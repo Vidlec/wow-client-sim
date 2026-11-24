@@ -105,6 +105,20 @@ export type ClockPerf = {
 export type SimulatorPerf = {
   heapMb?: number;
   worst?: { total: number; tick: number; export: number; encode: number; collected: boolean };
+  /** The frames' averages since last asked (ms), and the garbage collector's time between frames */
+  average?: {
+    frames: number;
+    total: number;
+    input: number;
+    tick: number;
+    export: number;
+    encode: number;
+    idleCollect: number;
+    tickWorld?: number;
+    tickTimers?: number;
+    tickUpdates?: number;
+    tickSizes?: number;
+  };
 };
 
 export type SimState = {
@@ -183,13 +197,37 @@ export type CatalogAddon = {
   version: string;
   author: string;
   dependencies: string[];
+  /** Loaded first when they are on, not needed */
+  optionalDependencies: string[];
   loadOnDemand: boolean;
   savedVariables: string[];
   enabled: boolean;
   savedBytes: number;
   /** One of the served project's own addons */
   isProject?: boolean;
+  /** Where it was found: the game's AddOns folder, a further folder (Settings' addon folders), the project */
+  origin: "game" | "folder" | "project";
+  /** The folder it was found in */
+  root: string;
+  /** Its TOC's ## Interface */
+  interfaceVersion: string;
+  /** Whether this client lists it (false: its TOC is only for other game lines) */
+  isForThisGame: boolean;
+  /** Its TOC's title as the game shows it, with its colour codes */
+  richTitle: string;
+  /** ## Category, with its colour codes: the game's AddOns list files it under this heading (none: after them) */
+  category: string;
+  /**
+   * The addon it is listed under, as the game's AddOns list nests it: ## Group, else the one it needs whose name its
+   * own starts with (EllesmereUIActionBars under EllesmereUI); its own name when it heads a group or stands alone
+   */
+  group: string;
+  /** ## IconTexture: its icon in the game's list (empty: none) */
+  iconTexture: string;
 };
+
+/** What a change of addons did (shared/addonDeps.ts) */
+export type { AddonPlan } from "../../shared/addonDeps.ts";
 
 export type SavedFile = { addon: string; text: string | null; bytes?: number };
 

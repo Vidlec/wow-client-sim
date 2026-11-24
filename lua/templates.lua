@@ -7,13 +7,14 @@ local T = {}
 local templates = require("xmlui").caseBlind() -- (looked up without regard to case, as the client does)
 T.templates = templates
 
-local function G(name) return sim.G[name] end
 local S = W.state
 
 function W.applyTemplate(object, name)
     -- The game's own (XML) template when it is loaded; the simulator's stand-in otherwise
     local xmlui = package.loaded["xmlui"]
-    if xmlui and xmlui.applyTemplate(object, name) then return end
+    if xmlui and xmlui.applyTemplate(object, name) then
+        return
+    end
     local template = templates[name]
     if not template then
         sim.noteStub("template:" .. tostring(name))
@@ -36,21 +37,44 @@ end
 -- Backdrops
 local backdropMethods = {
     SetBackdrop = function(self, backdrop)
-        S[self].backdrop = backdrop and {
-            bgFile = backdrop.bgFile, edgeFile = backdrop.edgeFile, tile = backdrop.tile, tileSize = backdrop.tileSize,
-            edgeSize = backdrop.edgeSize or 16, insets = backdrop.insets or { left = 0, right = 0, top = 0, bottom = 0 },
-        } or nil
+        S[self].backdrop = backdrop
+                and {
+                    bgFile = backdrop.bgFile,
+                    edgeFile = backdrop.edgeFile,
+                    tile = backdrop.tile,
+                    tileSize = backdrop.tileSize,
+                    edgeSize = backdrop.edgeSize or 16,
+                    insets = backdrop.insets or { left = 0, right = 0, top = 0, bottom = 0 },
+                }
+            or nil
         S[self].backdropColor = S[self].backdropColor or { 1, 1, 1, 1 }
         S[self].backdropBorderColor = S[self].backdropBorderColor or { 1, 1, 1, 1 }
-        sim.touch()
+        sim.touchVisual(self)
     end,
-    GetBackdrop = function(self) return S[self].backdrop end,
-    SetBackdropColor = function(self, r, g, b, a) S[self].backdropColor = { W.unpackColor(r, g, b, a) }; sim.touchVisual() end,
-    GetBackdropColor = function(self) return unpack(S[self].backdropColor or { 1, 1, 1, 1 }) end,
-    SetBackdropBorderColor = function(self, r, g, b, a) S[self].backdropBorderColor = { W.unpackColor(r, g, b, a) }; sim.touch() end,
-    GetBackdropBorderColor = function(self) return unpack(S[self].backdropBorderColor or { 1, 1, 1, 1 }) end,
-    ApplyBackdrop = function(self) sim.touch() end,
-    ClearBackdrop = function(self) S[self].backdrop = nil; sim.touch() end,
+    GetBackdrop = function(self)
+        return S[self].backdrop
+    end,
+    SetBackdropColor = function(self, r, g, b, a)
+        S[self].backdropColor = { W.unpackColor(r, g, b, a) }
+        sim.touchVisual(self)
+    end,
+    GetBackdropColor = function(self)
+        return unpack(S[self].backdropColor or { 1, 1, 1, 1 })
+    end,
+    SetBackdropBorderColor = function(self, r, g, b, a)
+        S[self].backdropBorderColor = { W.unpackColor(r, g, b, a) }
+        sim.touchVisual(self)
+    end,
+    GetBackdropBorderColor = function(self)
+        return unpack(S[self].backdropBorderColor or { 1, 1, 1, 1 })
+    end,
+    ApplyBackdrop = function(self)
+        sim.touchVisual(self)
+    end,
+    ClearBackdrop = function(self)
+        S[self].backdrop = nil
+        sim.touchVisual(self)
+    end,
     OnBackdropLoaded = function() end,
     OnBackdropSizeChanged = function() end,
 }
@@ -62,8 +86,14 @@ templates.BackdropTemplate = function(frame)
 end
 templates.TooltipBackdropTemplate = function(frame)
     templates.BackdropTemplate(frame)
-    frame:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true, tileSize = 16, edgeSize = 16, insets = { left = 5, right = 5, top = 5, bottom = 5 } })
+    frame:SetBackdrop({
+        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true,
+        tileSize = 16,
+        edgeSize = 16,
+        insets = { left = 5, right = 5, top = 5, bottom = 5 },
+    })
     frame:SetBackdropColor(0.09, 0.09, 0.19, 0.95)
     frame:SetBackdropBorderColor(1, 1, 1, 1)
 end
@@ -71,8 +101,11 @@ end
 -- Buttons
 templates.UIPanelButtonTemplate = function(button)
     button:SetSize(button:GetWidth() > 0 and button:GetWidth() or 80, 22)
-    for kind, path in pairs({ Normal = "Interface\\Buttons\\UI-Panel-Button-Up", Pushed = "Interface\\Buttons\\UI-Panel-Button-Down",
-        Disabled = "Interface\\Buttons\\UI-Panel-Button-Disabled" }) do
+    for kind, path in pairs({
+        Normal = "Interface\\Buttons\\UI-Panel-Button-Up",
+        Pushed = "Interface\\Buttons\\UI-Panel-Button-Down",
+        Disabled = "Interface\\Buttons\\UI-Panel-Button-Disabled",
+    }) do
         button["Set" .. kind .. "Texture"](button, path)
         button["Get" .. kind .. "Texture"](button):SetTexCoord(0, 0.625, 0, 0.6875)
     end
@@ -133,7 +166,11 @@ templates.BasicFrameTemplate = function(frame)
     titleBackground:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -25, -3)
     titleBackground:SetHeight(18)
     templates.BackdropTemplate(frame)
-    frame:SetBackdrop({ edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } })
+    frame:SetBackdrop({
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+        edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 },
+    })
     local name = S[frame].name
     local close = W.createFrame("Button", name and (name .. "CloseButton") or nil, frame, "UIPanelCloseButton")
     close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 2, 1)
@@ -178,7 +215,12 @@ templates.UIPanelScrollBarTemplate = function(slider)
     up:SetPushedTexture("Interface\\Buttons\\UI-ScrollBar-ScrollUpButton-Down")
     up:SetDisabledTexture("Interface\\Buttons\\UI-ScrollBar-ScrollUpButton-Disabled")
     up:SetHighlightTexture("Interface\\Buttons\\UI-ScrollBar-ScrollUpButton-Highlight", "ADD")
-    for _, region in ipairs({ up:GetNormalTexture(), up:GetPushedTexture(), up:GetDisabledTexture(), up:GetHighlightTexture() }) do
+    for _, region in ipairs({
+        up:GetNormalTexture(),
+        up:GetPushedTexture(),
+        up:GetDisabledTexture(),
+        up:GetHighlightTexture(),
+    }) do
         region:SetTexCoord(0.20, 0.80, 0.25, 0.75)
     end
     local down = W.createFrame("Button", name and (name .. "ScrollDownButton") or nil, slider)
@@ -188,12 +230,21 @@ templates.UIPanelScrollBarTemplate = function(slider)
     down:SetPushedTexture("Interface\\Buttons\\UI-ScrollBar-ScrollDownButton-Down")
     down:SetDisabledTexture("Interface\\Buttons\\UI-ScrollBar-ScrollDownButton-Disabled")
     down:SetHighlightTexture("Interface\\Buttons\\UI-ScrollBar-ScrollDownButton-Highlight", "ADD")
-    for _, region in ipairs({ down:GetNormalTexture(), down:GetPushedTexture(), down:GetDisabledTexture(), down:GetHighlightTexture() }) do
+    for _, region in ipairs({
+        down:GetNormalTexture(),
+        down:GetPushedTexture(),
+        down:GetDisabledTexture(),
+        down:GetHighlightTexture(),
+    }) do
         region:SetTexCoord(0.20, 0.80, 0.25, 0.75)
     end
     slider.ScrollUpButton, slider.ScrollDownButton = up, down
-    up:SetScript("OnClick", function() slider:SetValue(slider:GetValue() - 20) end)
-    down:SetScript("OnClick", function() slider:SetValue(slider:GetValue() + 20) end)
+    up:SetScript("OnClick", function()
+        slider:SetValue(slider:GetValue() - 20)
+    end)
+    down:SetScript("OnClick", function()
+        slider:SetValue(slider:GetValue() + 20)
+    end)
 end
 
 templates.UIPanelScrollFrameTemplate = function(frame)
@@ -212,7 +263,9 @@ templates.UIPanelScrollFrameTemplate = function(frame)
         end
     end
     frame:SetScript("OnScrollRangeChanged", update)
-    frame:SetScript("OnVerticalScroll", function(self, offset) bar:SetValue(offset) end)
+    frame:SetScript("OnVerticalScroll", function(self, offset)
+        bar:SetValue(offset)
+    end)
     frame:SetScript("OnMouseWheel", function(self, delta)
         local range = self:GetVerticalScrollRange()
         local offset = math.max(0, math.min(range, self:GetVerticalScroll() - delta * 20))
@@ -220,11 +273,12 @@ templates.UIPanelScrollFrameTemplate = function(frame)
     end)
     bar:SetScript("OnValueChanged", function(self, value)
         if math.abs(frame:GetVerticalScroll() - value) > 0.01 then
-            S[frame].verticalScroll = value
-            sim.touch()
+            frame:SetVerticalScroll(value) -- (its own hooks hear it; the bar's SetValue back is the same value)
         end
     end)
-    frame.SetHideIfUnscrollable = function(self, isHidden) S[self].hideIfUnscrollable = isHidden end
+    frame.SetHideIfUnscrollable = function(self, isHidden)
+        S[self].hideIfUnscrollable = isHidden
+    end
 end
 templates.ScrollFrameTemplate = templates.UIPanelScrollFrameTemplate
 templates.UIPanelInputScrollFrameTemplate = templates.UIPanelScrollFrameTemplate
@@ -290,22 +344,28 @@ templates.GameTooltipTemplate = function(tooltip)
 end
 
 -- Others the addons ask for
-templates.NineSlicePanelTemplate = function(frame) templates.BackdropTemplate(frame) end
+templates.NineSlicePanelTemplate = function(frame)
+    templates.BackdropTemplate(frame)
+end
 templates.CooldownFrameTemplate = function() end
 -- The game's secure button acts on its attributes when clicked: "item" uses that item, "macro" runs its text
 templates.SecureActionButtonTemplate = function(button)
     button:HookScript("OnClick", function(self, mouseButton, isDown)
         if isDown and self:GetAttribute("type") ~= nil then
             -- Registered for both: the game acts on the press only when the button is set to; take the release
-            local clicks = S[self] and S[self].clicks or {}
-            if not (clicks.AnyDown and not clicks.AnyUp) then return end
+            local state = S[self] or {}
+            if not (W.isClickRegistered(state, "Any", "Down") and not W.isClickRegistered(state, "Any", "Up")) then
+                return
+            end
         end
         local kind = self:GetAttribute("type")
         if kind == "item" then
             require("game").useItem(self:GetAttribute("item"))
         elseif kind == "macro" then
             for line in tostring(self:GetAttribute("macrotext") or ""):gmatch("[^\n]+") do
-                if require("sim").runSlashCommand then require("sim").runSlashCommand(line) end
+                if require("sim").runSlashCommand then
+                    require("sim").runSlashCommand(line)
+                end
             end
         end
     end)

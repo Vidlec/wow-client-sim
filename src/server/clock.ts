@@ -17,18 +17,19 @@ const runFrame = async (host: LuaHost, stream: SceneStream, elapsedSeconds: numb
     if (result.reload) await host.start();
     return;
   }
-  const request: Record<string, unknown> & { op: string } = { op: "frame" };
+  // (binary frames when the simulator's native store is built; else it answers in JSON as before: lua/stream.lua)
+  const request: Record<string, unknown> & { op: string } = { op: "frame", binary: true };
   const inputs = stream.takeInputs();
   if (inputs.length > 0) request.inputs = inputs;
   if (!host.isPaused) request.dt = elapsedSeconds * host.speed;
   const started = performance.now();
-  const text = await host.requestRaw(request);
+  const { text, bin } = await host.requestWithBinary(request);
   if (text.includes('"reload":true')) {
     await host.start();
     return;
   }
   stream.noteFrame(performance.now() - started, text.includes('"delta":true'), host.lastLockWait * 1000);
-  await stream.publish(host, text);
+  await stream.publish(host, text, bin);
 };
 
 export const runClock = async (host: LuaHost, stream: SceneStream, config: Config): Promise<never> => {

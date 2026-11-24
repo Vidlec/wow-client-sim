@@ -18,10 +18,29 @@ local gamepad = {}
 
 -- The buttons in the order the simulator numbers them (ButtonIndexToBinding, the mapped state's buttons): the
 -- client keeps its own order internally, this one is the simulator's
-gamepad.BUTTONS = { "PAD1", "PAD2", "PAD3", "PAD4", "PADLSHOULDER", "PADRSHOULDER", "PADLTRIGGER", "PADRTRIGGER", "PADBACK",
-    "PADFORWARD", "PADLSTICK", "PADRSTICK", "PADDUP", "PADDDOWN", "PADDLEFT", "PADDRIGHT", "PADSYSTEM" }
+gamepad.BUTTONS = {
+    "PAD1",
+    "PAD2",
+    "PAD3",
+    "PAD4",
+    "PADLSHOULDER",
+    "PADRSHOULDER",
+    "PADLTRIGGER",
+    "PADRTRIGGER",
+    "PADBACK",
+    "PADFORWARD",
+    "PADLSTICK",
+    "PADRSTICK",
+    "PADDUP",
+    "PADDDOWN",
+    "PADDLEFT",
+    "PADDRIGHT",
+    "PADSYSTEM",
+}
 local BUTTON_INDEX = {}
-for index, name in ipairs(gamepad.BUTTONS) do BUTTON_INDEX[name] = index end
+for index, name in ipairs(gamepad.BUTTONS) do
+    BUTTON_INDEX[name] = index
+end
 gamepad.STICKS = { "Movement", "Camera" }
 local STICK_PLACES = { Movement = "Left", Camera = "Right" }
 local DEVICE_ID, COMBINED_DEVICE_ID = 1, 0
@@ -32,11 +51,21 @@ local STICK_MOVES_AT = 0.35 -- how far a stick is pushed before it walks or turn
 -- shoulders the targeting)
 gamepad.CONTEXT_BINDINGS = {
     GamepadModeInGameCore = {
-        PADDLEFT = "GAMEPADACTIONBUTTON1", PADDUP = "GAMEPADACTIONBUTTON2", PADDRIGHT = "GAMEPADACTIONBUTTON3", PADDDOWN = "GAMEPADACTIONBUTTON4",
-        PAD3 = "GAMEPADACTIONBUTTON5", PAD4 = "GAMEPADACTIONBUTTON6", PAD2 = "GAMEPADACTIONBUTTON7", PAD1 = "GAMEPADACTIONBUTTON8",
-        PADLTRIGGER = "GAMEPADLEFTMOD", PADRTRIGGER = "GAMEPADRIGHTMOD",
-        PADLSHOULDER = "GAMEPADLEFTTARGETMODIFIER", PADRSHOULDER = "GAMEPADRIGHTTARGETMODIFIER",
-        PADFORWARD = "OPENRADIAL", PADBACK = "TOGGLEUIFOCUS", PADRSTICK = "TOGGLEPINGSYSTEM",
+        PADDLEFT = "GAMEPADACTIONBUTTON1",
+        PADDUP = "GAMEPADACTIONBUTTON2",
+        PADDRIGHT = "GAMEPADACTIONBUTTON3",
+        PADDDOWN = "GAMEPADACTIONBUTTON4",
+        PAD3 = "GAMEPADACTIONBUTTON5",
+        PAD4 = "GAMEPADACTIONBUTTON6",
+        PAD2 = "GAMEPADACTIONBUTTON7",
+        PAD1 = "GAMEPADACTIONBUTTON8",
+        PADLTRIGGER = "GAMEPADLEFTMOD",
+        PADRTRIGGER = "GAMEPADRIGHTMOD",
+        PADLSHOULDER = "GAMEPADLEFTTARGETMODIFIER",
+        PADRSHOULDER = "GAMEPADRIGHTTARGETMODIFIER",
+        PADFORWARD = "OPENRADIAL",
+        PADBACK = "TOGGLEUIFOCUS",
+        PADRSTICK = "TOGGLEPINGSYSTEM",
     },
 }
 
@@ -52,20 +81,28 @@ gamepad.state = state
 
 ---@return string? name The name of a binding context (Enum.BindingContext value or name)
 local function contextName(context)
-    if type(context) == "string" then return context end
+    if type(context) == "string" then
+        return context
+    end
     for name, value in pairs(G.Enum and G.Enum.BindingContext or {}) do
-        if value == context then return name end
+        if value == context then
+            return name
+        end
     end
 end
 
 ---@return string? command What a pad button runs now: an override binding, the active contexts', or a plain one
 function gamepad.getCommand(key)
     local override = sim.overrideBindings[key]
-    if override and override.command and override.command ~= "" then return override.command end
+    if override and override.command and override.command ~= "" then
+        return override.command
+    end
     for context in pairs(state.contexts) do
         local bindings = gamepad.CONTEXT_BINDINGS[context]
         local command = bindings and bindings[key]
-        if command then return command end
+        if command then
+            return command
+        end
     end
     return sim.bindings[key]
 end
@@ -82,14 +119,22 @@ local function sendToFrames(flag, script, ...)
             local result
             if handler then
                 local isFine, value = pcall(handler, frame, ...)
-                if isFine then result = value else sim.reportError(value, debug.traceback()) end
+                if isFine then
+                    result = value
+                else
+                    sim.reportError(value, debug.traceback())
+                end
             end
             local hooks = s.hooks and s.hooks[script]
-            for _, hook in ipairs(hooks or {}) do sim.call(hook, frame, ...) end
+            for _, hook in ipairs(hooks or {}) do
+                sim.call(hook, frame, ...)
+            end
             -- (a stick handler answers whether it left the stick unhandled; a button handler lets the press go on when
             -- it answers true, as the client's radial wheels do with every button but B, or by propagation)
             if flag == "gamePadStick" then
-                if result ~= true then return true end
+                if result ~= true then
+                    return true
+                end
             elseif result ~= true and not s.propagateKeyboard then
                 return true
             end
@@ -100,19 +145,29 @@ end
 
 function gamepad.press(key)
     key = key:upper()
-    if state.buttons[key] then return end
+    if state.buttons[key] then
+        return
+    end
     state.buttons[key] = true
     gamepad.connect()
-    if sendToFrames("gamePadButton", "OnGamePadButtonDown", key) then sim.touch(); return end
+    if sendToFrames("gamePadButton", "OnGamePadButtonDown", key) then
+        sim.touch()
+        return
+    end
     require("scene").runCommand(gamepad.getCommand(key), true, key)
     sim.touch()
 end
 
 function gamepad.release(key)
     key = key:upper()
-    if not state.buttons[key] then return end
+    if not state.buttons[key] then
+        return
+    end
     state.buttons[key] = nil
-    if sendToFrames("gamePadButton", "OnGamePadButtonUp", key) then sim.touch(); return end
+    if sendToFrames("gamePadButton", "OnGamePadButtonUp", key) then
+        sim.touch()
+        return
+    end
     require("scene").releaseCommand(gamepad.getCommand(key), key)
     sim.touch()
 end
@@ -132,9 +187,13 @@ end
 ---walks (forward, back, sideways) and the Camera stick turns.
 function gamepad.setStick(stick, x, y)
     local current = state.sticks[stick]
-    if not current then return end
+    if not current then
+        return
+    end
     x, y = tonumber(x) or 0, tonumber(y) or 0
-    if current.x == x and current.y == y then return end
+    if current.x == x and current.y == y then
+        return
+    end
     current.x, current.y = x, y
     gamepad.connect()
     local length = math.min(1, math.sqrt(x * x + y * y))
@@ -155,16 +214,24 @@ function gamepad.setStick(stick, x, y)
 end
 
 function gamepad.connect(name)
-    if name then state.name = name end
-    if state.isConnected then return end
+    if name then
+        state.name = name
+    end
+    if state.isConnected then
+        return
+    end
     state.isConnected = true
     sim.fireEvent("GAME_PAD_CONNECTED")
     sim.fireEvent("GAME_PAD_ACTIVE_CHANGED", true)
 end
 
 function gamepad.disconnect()
-    if not state.isConnected then return end
-    for key in pairs(state.buttons) do gamepad.release(key) end
+    if not state.isConnected then
+        return
+    end
+    for key in pairs(state.buttons) do
+        gamepad.release(key)
+    end
     gamepad.setStick("Movement", 0, 0)
     gamepad.setStick("Camera", 0, 0)
     state.isConnected = false
@@ -202,38 +269,78 @@ end
 function gamepad.install()
     G.C_GamePad = G.C_GamePad or {}
     local pad = G.C_GamePad
-    pad.IsEnabled = function() return G.GetCVar("GamePadEnable") ~= "0" end
-    pad.GetActiveDeviceID = function() return state.isConnected and DEVICE_ID or -1 end
-    pad.GetAllDeviceIDs = function() return state.isConnected and { DEVICE_ID } or {} end
-    pad.GetCombinedDeviceID = function() return COMBINED_DEVICE_ID end
+    pad.IsEnabled = function()
+        return G.GetCVar("GamePadEnable") ~= "0"
+    end
+    pad.GetActiveDeviceID = function()
+        return state.isConnected and DEVICE_ID or -1
+    end
+    pad.GetAllDeviceIDs = function()
+        return state.isConnected and { DEVICE_ID } or {}
+    end
+    pad.GetCombinedDeviceID = function()
+        return COMBINED_DEVICE_ID
+    end
     pad.GetDeviceMappedState = function(deviceId)
-        if not state.isConnected then return nil end
+        if not state.isConnected then
+            return nil
+        end
         local buttons, axes = {}, {}
-        for index, name in ipairs(gamepad.BUTTONS) do buttons[index] = state.buttons[name] == true end
+        for index, name in ipairs(gamepad.BUTTONS) do
+            buttons[index] = state.buttons[name] == true
+        end
         local sticks = {}
         for index, name in ipairs(gamepad.STICKS) do
             local stick = state.sticks[name]
-            sticks[index] = { x = stick.x, y = stick.y, len = math.min(1, math.sqrt(stick.x * stick.x + stick.y * stick.y)) }
+            sticks[index] =
+                { x = stick.x, y = stick.y, len = math.min(1, math.sqrt(stick.x * stick.x + stick.y * stick.y)) }
             axes[#axes + 1], axes[#axes + 2] = stick.x, stick.y
         end
-        return { name = state.name, labelStyle = "Generic", buttonCount = #buttons, axisCount = #axes, stickCount = #sticks,
-            buttons = buttons, axes = axes, sticks = sticks }
+        return {
+            name = state.name,
+            labelStyle = "Generic",
+            buttonCount = #buttons,
+            axisCount = #axes,
+            stickCount = #sticks,
+            buttons = buttons,
+            axes = axes,
+            sticks = sticks,
+        }
     end
     pad.GetDeviceRawState = pad.GetDeviceMappedState
-    pad.ButtonIndexToBinding = function(index) return gamepad.BUTTONS[(index or 0) + 1] end
-    pad.ButtonBindingToIndex = function(binding) local index = binding and BUTTON_INDEX[binding:upper()]; return index and index - 1 or nil end
-    pad.ButtonIndexToConfigName = function(index) return gamepad.BUTTONS[(index or 0) + 1] end
-    pad.StickIndexToConfigName = function(index) return gamepad.STICKS[(index or 0) + 1] end
-    pad.AxisIndexToConfigName = function(index) return ({ "LStickX", "LStickY", "RStickX", "RStickY" })[(index or 0) + 1] end
-    pad.GetPowerLevel = function() return G.Enum and G.Enum.GamePadPowerLevel and G.Enum.GamePadPowerLevel.Wired or 4 end
+    pad.ButtonIndexToBinding = function(index)
+        return gamepad.BUTTONS[(index or 0) + 1]
+    end
+    pad.ButtonBindingToIndex = function(binding)
+        local index = binding and BUTTON_INDEX[binding:upper()]
+        return index and index - 1 or nil
+    end
+    pad.ButtonIndexToConfigName = function(index)
+        return gamepad.BUTTONS[(index or 0) + 1]
+    end
+    pad.StickIndexToConfigName = function(index)
+        return gamepad.STICKS[(index or 0) + 1]
+    end
+    pad.AxisIndexToConfigName = function(index)
+        return ({ "LStickX", "LStickY", "RStickX", "RStickY" })[(index or 0) + 1]
+    end
+    pad.GetPowerLevel = function()
+        return G.Enum and G.Enum.GamePadPowerLevel and G.Enum.GamePadPowerLevel.Wired or 4
+    end
     pad.SetVibration = function() end
     pad.StopVibration = function() end
     pad.SetLedColor = function() end
     pad.ClearLedColor = function() end
-    pad.GetLedColor = function() return nil end
+    pad.GetLedColor = function()
+        return nil
+    end
     local allowHover = false
-    pad.GetAllowHoverEventsWithFreeLook = function() return allowHover end
-    pad.SetAllowHoverEventsWithFreeLook = function(isAllowed) allowHover = isAllowed == true end
+    pad.GetAllowHoverEventsWithFreeLook = function()
+        return allowHover
+    end
+    pad.SetAllowHoverEventsWithFreeLook = function(isAllowed)
+        allowHover = isAllowed == true
+    end
 
     G.C_InputInterfaceStyle = G.C_InputInterfaceStyle or {}
     G.C_InputInterfaceStyle.GetCurrentStyle = gamepad.getStyle
@@ -245,7 +352,9 @@ function gamepad.install()
         local keys = { getBindingKey(command, ...) }
         for context in pairs(state.contexts) do
             for key, bound in pairs(gamepad.CONTEXT_BINDINGS[context] or {}) do
-                if bound == command then keys[#keys + 1] = key end
+                if bound == command then
+                    keys[#keys + 1] = key
+                end
             end
         end
         return unpack(keys)
@@ -253,23 +362,37 @@ function gamepad.install()
     -- Whether a key is held now: a pad button, a modifier, or a keyboard key the page holds down
     sim.heldKeys = sim.heldKeys or {}
     G.IsKeyDown = function(key)
-        if type(key) ~= "string" then return false end
+        if type(key) ~= "string" then
+            return false
+        end
         local upper = key:upper()
-        if state.buttons[upper] then return true end
-        if upper == "LSHIFT" or upper == "RSHIFT" or upper == "SHIFT" then return sim.modifiers.shift == true end
-        if upper == "LCTRL" or upper == "RCTRL" or upper == "CTRL" then return sim.modifiers.ctrl == true end
-        if upper == "LALT" or upper == "RALT" or upper == "ALT" then return sim.modifiers.alt == true end
+        if state.buttons[upper] then
+            return true
+        end
+        if upper == "LSHIFT" or upper == "RSHIFT" or upper == "SHIFT" then
+            return sim.modifiers.shift == true
+        end
+        if upper == "LCTRL" or upper == "RCTRL" or upper == "CTRL" then
+            return sim.modifiers.ctrl == true
+        end
+        if upper == "LALT" or upper == "RALT" or upper == "ALT" then
+            return sim.modifiers.alt == true
+        end
         return sim.heldKeys[upper] == true
     end
 
     G.C_KeyBindings = G.C_KeyBindings or {}
     G.C_KeyBindings.ActivateBindingContext = function(context)
         local name = contextName(context)
-        if name then state.contexts[name] = true end
+        if name then
+            state.contexts[name] = true
+        end
     end
     G.C_KeyBindings.DeactivateBindingContext = function(context)
         local name = contextName(context)
-        if name then state.contexts[name] = nil end
+        if name then
+            state.contexts[name] = nil
+        end
     end
     G.C_KeyBindings.IsBindingContextActive = function(context)
         local name = contextName(context)
@@ -277,8 +400,12 @@ function gamepad.install()
     end
 
     -- The interface style set by the game's own settings (or an addon) switches it, as the setting does in the client
-    if sim.cvars.InputDeviceInterfaceStyle == nil then sim.cvars.InputDeviceInterfaceStyle = "0" end
-    if sim.cvars.GamePadEnable == nil then sim.cvars.GamePadEnable = "1" end
+    if sim.cvars.InputDeviceInterfaceStyle == nil then
+        sim.cvars.InputDeviceInterfaceStyle = "0"
+    end
+    if sim.cvars.GamePadEnable == nil then
+        sim.cvars.GamePadEnable = "1"
+    end
     local setCVar = G.SetCVar
     local function setCVarSwitching(name, value, ...)
         if type(name) == "string" and name:lower() == "inputdeviceinterfacestyle" then
@@ -295,7 +422,9 @@ function gamepad.install()
     G.C_CVar = G.C_CVar or {}
     local saved = {}
     G.C_CVar.SetTempCVar = function(name, value)
-        if saved[name] == nil then saved[name] = { value = sim.cvars[name] } end
+        if saved[name] == nil then
+            saved[name] = { value = sim.cvars[name] }
+        end
         setCVar(name, value)
     end
     G.C_CVar.RemoveTempCVar = function(name)

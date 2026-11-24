@@ -14,6 +14,7 @@ export const createInspector = (boxes: HTMLElement): Inspector => {
   let options: InspectOptions = { isOn: false, isHeld: false, isDrawnOnly: true };
   let frames: InspectedFrame[] = [];
   let isBusy = false;
+  let pendingPoint: { x: number; y: number } | null = null; // (the latest point asked for while busy)
   const listeners = new Set<Listener<InspectedFrame[]>>();
 
   const drawBoxes = (shown: readonly InspectedFrame[], pickedId: number | null): void => {
@@ -31,7 +32,10 @@ export const createInspector = (boxes: HTMLElement): Inspector => {
   };
 
   const inspectAt = async (point: { x: number; y: number }): Promise<void> => {
-    if (isBusy) return;
+    if (isBusy) {
+      pendingPoint = point;
+      return;
+    }
     isBusy = true;
     try {
       const response = await fetch("/api/inspect", {
@@ -46,6 +50,12 @@ export const createInspector = (boxes: HTMLElement): Inspector => {
     }
     isBusy = false;
     if (!options.isOn) return; // (switched off meanwhile)
+    if (pendingPoint) {
+      const next = pendingPoint;
+      pendingPoint = null;
+      void inspectAt(next);
+      return;
+    }
     drawBoxes(frames, null);
     for (const listener of listeners) listener(frames);
   };

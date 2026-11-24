@@ -4,12 +4,12 @@ import { Comments, Skull } from "@gravity-ui/icons";
 import { Button, Chip, SearchField, Spinner, toast } from "@heroui/react";
 import { useState } from "react";
 import { EmptyState } from "../../components/bits.tsx";
+import { focusGame } from "../../shell/screen.ts";
 import { api } from "../../sim/api.ts";
 import { useGameAction } from "../../sim/hooks.ts";
 import { getPrefs } from "../../sim/prefs.ts";
 import type { FoundNpc } from "../../sim/types.ts";
 import { useSearch } from "../../sim/useSearch.ts";
-import { TalkDialog } from "./TalkDialog.tsx";
 
 const findNpcs = (query: string): Promise<FoundNpc[]> => api.findNpcs(query, 15);
 
@@ -48,16 +48,14 @@ const NpcRow = ({ npc, onTalk }: { npc: FoundNpc; onTalk: () => void }) => {
 
 export const GiverFinder = () => {
   const [text, setText] = useState("");
-  const [talkingTo, setTalkingTo] = useState<number | null>(null);
   const search = useSearch(text, findNpcs);
   const talk = useGameAction();
+  // The giver's own window opens in the game (its gossip, then the quest window with Accept and Decline, the reward
+  // window with Complete Quest), answered there as in the client: what reads those windows (a narration addon) sees it
   const startTalking = async (npc: FoundNpc): Promise<void> => {
-    setTalkingTo(npc.id);
     const answer = await talk.run({ action: "talk", npcId: npc.id });
-    if (answer?.problem) {
-      toast.danger(`${npc.name}: ${answer.problem}`);
-      setTalkingTo(null);
-    }
+    if (answer?.problem) toast.danger(`${npc.name}: ${answer.problem}`);
+    else focusGame();
   };
   return (
     <div className="flex flex-col gap-3">
@@ -81,7 +79,6 @@ export const GiverFinder = () => {
           ))}
         </ul>
       )}
-      <TalkDialog npcId={talkingTo} onClose={() => setTalkingTo(null)} />
     </div>
   );
 };

@@ -100,10 +100,14 @@ const scenarioArg = (name: string): string => {
 };
 
 const runTest = async (project: Project, args: Args): Promise<number> => {
-  const [{ playScenarios, matchScenarios, findScenario }, { formatRun, formatSuite }] = await Promise.all([
-    import("./suite.ts"),
-    import("../sdk/format.ts"),
-  ]);
+  const [{ playScenarios, matchScenarios, findScenario, stopRuns }, { formatRun, formatSuite }, { guardRuns }] =
+    await Promise.all([import("./suite.ts"), import("../sdk/format.ts"), import("./guardRuns.ts")]);
+  // (stopped, by Ctrl+C or its shell gone: its runs and their folders go with it, as `bun run play`'s)
+  guardRuns("test");
+  process.on("SIGINT", () => {
+    stopRuns();
+    process.exit(130);
+  });
   // Names as they are; a pattern (no such file or scenario) as the scenarios whose names match it (* any text; with a
   // folder before it, that folder's: audits/marks-*)
   const scenarios: string[] = [];
@@ -344,17 +348,21 @@ const runDaemonCommand = async (project: Project, args: Args): Promise<number> =
 };
 
 const serve = async (project: Project): Promise<number> => {
-  const { SOURCE_ROOT, IS_STANDALONE } = await import("../server/paths.ts");
-  const command = IS_STANDALONE
-    ? [process.execPath, "--project", project.root]
-    : [process.execPath, "run", resolve(SOURCE_ROOT, "src", "server", "main.ts"), "--project", project.root];
+  const { SOURCE_ROOT } = await import("../server/paths.ts");
+  const command = [
+    process.execPath,
+    "run",
+    resolve(SOURCE_ROOT, "src", "server", "main.ts"),
+    "--project",
+    project.root,
+  ];
   const child = Bun.spawn(command, {
     stdin: "inherit",
     stdout: "inherit",
     stderr: "inherit",
-    // From the sources, Bun reads the page's Tailwind plugin from bunfig.toml in the working directory, so the server
-    // runs in AddonSim's own folder (the project comes from --project); without it the page loads with no styles
-    cwd: IS_STANDALONE ? project.root : SOURCE_ROOT,
+    // Bun reads the page's Tailwind plugin from bunfig.toml in the working directory, so the server runs in AddonSim's
+    // own folder (the project comes from --project); without it the page loads with no styles
+    cwd: SOURCE_ROOT,
     windowsHide: true,
   });
   return child.exited;

@@ -74,7 +74,9 @@ const readState = async (): Promise<void> => {
     return;
   }
   if (!isState(answer)) {
-    publish({ ...snapshot, problem: answer, isOffline: false });
+    // (the same problem polled again is not news: the page would draw again twice a second while it lasts)
+    const problem = replaceEqualDeep(snapshot.problem, answer);
+    if (problem !== snapshot.problem || snapshot.isOffline) publish({ ...snapshot, problem, isOffline: false });
     return;
   }
   const previous = snapshot.state;

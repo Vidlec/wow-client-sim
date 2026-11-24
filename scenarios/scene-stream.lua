@@ -6,7 +6,6 @@ local json = require("json")
 local scene = require("scene")
 local stream = require("stream")
 local W = require("widgets")
-local S = W.state
 local sim = require("sim")
 
 setProfile({ level = 30, race = "Scourge", class = "MAGE" })
@@ -22,31 +21,45 @@ local function apply(frame)
             held[key], order[index] = item, key
         end
     elseif frame.delta then
-        for _, item in ipairs(frame.u or {}) do held[item.k .. item.i] = item end
-        if frame.o then order = frame.o end
+        for _, item in ipairs(frame.u or {}) do
+            held[item.k .. item.i] = item
+        end
+        if frame.o then
+            order = frame.o
+        end
     end
 end
 local function writeFrame(isWhole)
     local parts = {}
     if isWhole then
         stream.encodeWhole(parts)
-        return json.decode("{\"whole\":true," .. table.concat(parts) .. "}")
+        return json.decode('{"whole":true,' .. table.concat(parts) .. "}")
     end
-    if stream.getVersion() == sim.version then return {} end
+    if stream.getVersion() == sim.version then
+        return {}
+    end
     local isChanged = stream.encodeChanges(scene.export(), parts)
     stream.setVersion(sim.version)
-    if not isChanged then return {} end
-    return json.decode("{\"delta\":true," .. table.concat(parts) .. "}")
+    if not isChanged then
+        return {}
+    end
+    return json.decode('{"delta":true,' .. table.concat(parts) .. "}")
 end
 local function canonical(value)
-    if type(value) ~= "table" then return tostring(value) end
+    if type(value) ~= "table" then
+        return tostring(value)
+    end
     local keys = {}
-    for key in pairs(value) do keys[#keys + 1] = tostring(key) end
+    for key in pairs(value) do
+        keys[#keys + 1] = tostring(key)
+    end
     table.sort(keys)
     local parts = {}
     for _, key in ipairs(keys) do
         local inner = value[key]
-        if inner == nil then inner = value[tonumber(key)] end
+        if inner == nil then
+            inner = value[tonumber(key)]
+        end
         parts[#parts + 1] = key .. "=" .. canonical(inner)
     end
     return "{" .. table.concat(parts, ",") .. "}"
@@ -63,8 +76,17 @@ local function check(label)
         end
     end
     checked = checked + 1
-    expect(isSame, label .. ": the page's scene is the export's (" .. #order .. " vs " .. #expected .. " items"
-        .. (firstDifference and ", first difference at " .. firstDifference or "") .. ")")
+    expect(
+        isSame,
+        label
+            .. ": the page's scene is the export's ("
+            .. #order
+            .. " vs "
+            .. #expected
+            .. " items"
+            .. (firstDifference and ", first difference at " .. firstDifference or "")
+            .. ")"
+    )
 end
 -- Every shown frame's rectangle, as kept, against the same worked out with nothing kept
 local function checkLayout(label)
@@ -81,11 +103,17 @@ local function checkLayout(label)
             differing = differing + 1
         elseif fresh then
             for index = 1, 4 do
-                if math.abs(fresh[index] - rect[index]) > 0.01 then differing = differing + 1; break end
+                if math.abs(fresh[index] - rect[index]) > 0.01 then
+                    differing = differing + 1
+                    break
+                end
             end
         end
     end
-    expect(differing == 0, label .. ": rectangles kept between frames are as worked out afresh (" .. differing .. " differ)")
+    expect(
+        differing == 0,
+        label .. ": rectangles kept between frames are as worked out afresh (" .. differing .. " differ)"
+    )
 end
 
 local function frames(label, count, area)
@@ -95,7 +123,9 @@ local function frames(label, count, area)
         hover({ x, y })
         sim.tick(1 / 60)
         apply(writeFrame(false))
-        if index % 8 == 0 then check(label .. " frame " .. index) end
+        if index % 8 == 0 then
+            check(label .. " frame " .. index)
+        end
     end
     checkLayout(label)
 end

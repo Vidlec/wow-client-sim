@@ -133,8 +133,21 @@ the daemon while it runs). A project's `.mcp.json`:
 
 ## Working on AddonSim itself
 
-- `bun test` (the TypeScript's tests, the SDK's among them), `bun run typecheck`, `bun run lint` must stay clean.
+- `bun run check` must stay clean: the types, Biome, `bun run lint:lua` (StyLua and luacheck over the Lua), `bun test`
+  (the TypeScript's tests, the SDK's among them) and `bun run test:lua` (`lua/tests/`, the Lua that needs nothing of
+  the game). CI runs it on every push
+  (`.github/workflows/ci.yml`), and builds and starts the Docker image. There are no binary releases: AddonSim runs
+  from its sources or the image (`Dockerfile`, `docs/docker.md`); keep the image working when the setup changes.
 - `bun src/cli/main.ts test` in this folder plays the simulator's own scenarios (`scenarios/`, the SimFixture addon).
 - Code: `src/sdk/` (engine, daemon, SDK), `src/mcp/`, `src/cli/main.ts`; `lua/sdkplay.lua` (play.lua kept up as a
   live game) and `lua/sdkui.lua` (frames and state as data). The design and its costs: `docs/sdk.md`.
-- Arrow functions only in TypeScript; Lua follows each file's style.
+- Arrow functions only in TypeScript.
+- Lua is formatted by StyLua (`stylua.toml`: 120 columns, 4 spaces, double quotes; `bun run format:lua`) and linted
+  by luacheck (`.luacheckrc`); both are in `bun run lint:lua`. The tools: `bun run tools:lua` fetches the pinned
+  versions into `tools/bin` on Windows (elsewhere it says how to install them); `lua/vendor` is left as its authors
+  wrote it. A deliberate exception is made on its own line: `-- luacheck: ignore 211 (why)`.
+- Two Lua traps luacheck has caught here: `local a, b = x and f()` keeps only f's first value (b is always nil),
+  and a global the client lacks (GetItemInfo on Forever, where it is C_Item.GetItemInfo) behind `X and X()` is a
+  feature that silently never runs.
+- The language server (LuaLS, in VS Code's Lua extension) checks the annotations (`---@param`...) as you edit; its
+  headless check (`lua-language-server --check=lua`) reports too many false positives to gate on.

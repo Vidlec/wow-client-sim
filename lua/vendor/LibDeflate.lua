@@ -1,5 +1,4 @@
--- Vendored from ../Questie/Libs/LibDeflate/LibDeflate.lua
--- Source commit: b1a6dc8c50a92ab88723a11556421d6462cdea49
+-- LibDeflate 1.0.2 (https://github.com/SafeteeWoW/LibDeflate), by Haoqian He, under the zlib License (below).
 
 --[[--
 LibDeflate 1.0.2-release <br>

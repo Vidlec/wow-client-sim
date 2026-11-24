@@ -4,7 +4,7 @@ import { useEffect, useSyncExternalStore } from "react";
 import {
   type FolderCheck,
   type FolderKind,
-  type FolderPick,
+  type FolderListing,
   SETUP_ROUTES,
   type SettingsChange,
   type SetupAnswer,
@@ -70,8 +70,8 @@ export const downloadInterface = async (): Promise<SetupState> => {
 export const checkFolder = (kind: FolderKind, path: string): Promise<FolderCheck> =>
   postJson(SETUP_ROUTES.checkFolder, { kind, path });
 
-export const pickFolder = (kind: FolderKind, startPath?: string): Promise<FolderPick> =>
-  postJson(SETUP_ROUTES.pickFolder, startPath ? { kind, startPath } : { kind });
+export const listFolder = (kind: FolderKind, path?: string): Promise<FolderListing> =>
+  postJson(SETUP_ROUTES.listFolder, path ? { kind, path } : { kind });
 
 const subscribe = (listener: () => void): (() => void) => {
   listeners.add(listener);

@@ -29,43 +29,53 @@ the MCP server).
 - **A network connection the first time**: the game's art and tables are fetched from [wago.tools](https://wago.tools)
   at the client's build and cached (a few minutes on the first start, then never again).
 - **Google Chrome or Edge**, only for the picture tools (`bun run shots`, comparisons).
-- From the sources only: **[Bun](https://bun.sh)** 1.4 or newer.
+- **[Bun](https://bun.sh)** 1.4 or newer, and optionally **[Rust](https://rustup.rs)** for the native core (below).
+
+Or only **Docker**: the image has all of it (below).
 
 ## Quick start
 
-**The executable**: download `addonsim.exe` (Windows; `addonsim` for macOS and Linux) and run it. It opens the page in
-your browser; the setup screen asks for what is missing, and the simulator starts once it has it. Nothing to install
-but LuaJIT, no file to write.
-
-**From the sources**:
+AddonSim is built from its sources; there are no binaries to download.
 
 ```
 bun install
+bun run native         (optional, needs Rust: the native core, which draws the scene faster; without it the scene
+                        stream is JSON, made in Lua)
 bun run start          (or: bun run dev, which restarts the server when its own code changes)
 ```
 
 Open http://127.0.0.1:8765/ (a first start opens it for you): the setup screen does the rest. Then switch your addons on
 in the page's **Addons** tab.
 
-`bun run build` makes the executable from the sources: `dist/addonsim.exe` (or `dist/addonsim`; `--target=bun-linux-x64`,
-`bun-darwin-arm64`... for another system). It carries the server, the page and the simulator's Lua inside it.
+**With Docker** (nothing else to install):
+
+```
+docker compose up --build
+```
+
+Then open http://localhost:8765/ and choose your AddOns folder in the page's folder browser (your home folder is
+mounted read-only for it; `ADDONSIM_FOLDER` names another, the drive the game is on say). The image has Bun, LuaJIT
+and the native core built in; the game's files, saved variables, the interface source and the settings are kept in
+the `addonsim-data` volume. A project's scenarios run in it too (`addonsim test`): [docs/docker.md](docs/docker.md).
 
 ## Settings
 
 The app keeps its settings itself, and the page changes them (its setup screen and settings): every setting below goes
 through `POST /api/setup` (`src/shared/setup.ts` has the API). They are kept in the user's settings folder:
 
-| System | Settings | Data (the game's files cached, saved variables, the downloaded interface source) |
-| --- | --- | --- |
-| Windows | `%APPDATA%\AddonSim\settings.json` | `%LOCALAPPDATA%\AddonSim` |
-| macOS | `~/Library/Application Support/AddonSim/settings.json` | `~/Library/Application Support/AddonSim` |
-| Linux | `~/.config/addonsim/settings.json` | `~/.local/share/addonsim` |
+| System | Settings |
+| --- | --- |
+| Windows | `%APPDATA%\AddonSim\settings.json` |
+| macOS | `~/Library/Application Support/AddonSim/settings.json` |
+| Linux | `~/.config/addonsim/settings.json` |
 
-From a source checkout the data stays in the checkout (`cache/`, `saved/`, `lua/`), and a `config.json` there from
-before is read into the settings on the first start, and again whenever it is changed (so editing it by hand still
-works). For developers, never needed: `ADDONSIM_PORT` (another port, beside a server already running),
-`ADDONSIM_SAVED_DIR` (another saved-variables folder), `ADDONSIM_HOME` (settings and the executable's data in one
-folder: a second app, or a first run from nothing).
+The data stays in the checkout: `cache/` (the game's files), `saved/` (saved variables), `interface/` (the downloaded
+interface source). A `config.json` there from before is read into the settings on the first start, and again whenever
+it is changed (so editing it by hand still works). For developers, never needed: `ADDONSIM_PORT` (another port,
+beside a server already running), `ADDONSIM_HOST` (the address served on: `0.0.0.0` in a container),
+`ADDONSIM_NO_BROWSER=1` (never open the browser), `ADDONSIM_BROWSE` (where the folder browser starts, and the
+setup looks for the game: a container's mounted folders), `ADDONSIM_SAVED_DIR` (another saved-variables folder), `ADDONSIM_HOME` (the settings in one folder: a second app, or a
+first run from nothing).
 
 | Setting | What it does |
 | --- | --- |
@@ -84,7 +94,7 @@ folder: a second app, or a first run from nothing).
 | `autoReload` | Reload the addons whenever one of their files is saved. |
 | `fps` | The game's clock, frames a second (10 to 240). |
 | `port` | The page's port (taken at the next start). |
-| `openBrowser` | Open the page as the app starts (the executable always; from the sources, while the setup is not done). |
+| `openBrowser` | Open the page as the app starts, while the setup is not done. |
 | `luajitPath` | LuaJIT's executable; empty to find it. |
 
 ## The page
@@ -92,6 +102,9 @@ folder: a second app, or a first run from nothing).
 - **The game screen**: click, type, hold W A S D to walk, M for the map, Esc for the game menu. The game's own key
   bindings run as in the client. The command box in the header runs slash commands, with Up and Down for the ones typed
   before.
+- **Sound** (the speaker in the header): the game's sounds play in the page, at its own sound settings (master and
+  channel volumes): the interface's clicks, addons' files (a quest's narration), music. The browser lets the page
+  make sound after a first click or key in it. Scenarios see what played in `require("sound").history`.
 - **Screen and UI scale** (header): the game's resolution, from 1024x768 to 5120x1440 (4:3, 5:4, 16:10, 16:9, 21:9,
   32:9), and its UI Scale setting (off draws pixel for pixel, as the game does by default). The choice is kept between
   runs; a scenario sets its own with `screen(width, height, uiScale)`.
@@ -238,9 +251,10 @@ which documents each function), a small API kept stable:
 
 - `registerPartyAddon(name, { label, note, color, isDefault, onJoin, onQuestChanged, onLeave, onMessage })`: an addon
   a simulated party member may run, and what it tells the player's addons. `sendFromMember(member, prefix, text,
-  channel, delay)` delivers a member's addon message (CHAT_MSG_ADDON); `partyMembers()`, `playerName()`, `fullName()`.
-  A member runs no addon unless one is named, or a registration says `isDefault`. Questie's member is the simulator's
-  own registration through the same API (`lua/questiemember.lua`). The page's Party tab lists what is registered.
+  channel, delay)` delivers a member's addon message (CHAT_MSG_ADDON); `partyMembers()`, `playerName()`, `fullName()`;
+  `gameGlobals()` gives the game's globals, for a plugin that runs an addon's own code in a sandbox. A member runs no
+  addon unless one is named, or a registration says `isDefault`. None is built into the simulator: every party addon
+  is a project's plugin. The page's Party tab lists what is registered.
 - `addSteps(function(steps, act) ... end)`: scenario steps of the plugin's.
 - `onBoot(fn)`: run right before the addons load, the game's interface in.
 
@@ -259,7 +273,17 @@ which documents each function), a small API kept stable:
   headless Chrome (a server serving the same project must run).
 - `bun run play --coverage`: which lines of the project's coverage addon ran (slow); `bun run coverage` rebuilds the
   report (`<scenarios>/.coverage/report.txt`).
-- `bun test`, `bun run typecheck`, `bun run lint`: the TypeScript's tests, type check (TypeScript 7) and Biome.
+- `bun test`, `bun run typecheck`, `bun run lint`: the TypeScript's tests, type check (TypeScript 7) and Biome;
+  `bun run test:lua`: the Lua tests that need nothing of the game (`lua/tests/`); `bun run check`: all of them, as CI
+  runs them. The scenarios (`bun src/cli/main.ts test`) need the game's files and the interface source: local only.
+
+## CI
+
+- `.github/workflows/ci.yml`: on every push to `main` and every pull request, `bun run check` (the native core's check
+  in a job of its own), the Lua tests on Linux and macOS, and the Docker image built and started (its page answers,
+  LuaJIT and the native core load in it). There are no binary releases: AddonSim is run from its sources, or the
+  image.
+- What changed between versions, in detail: `docs/changes/`.
 
 ## The code
 
@@ -272,10 +296,13 @@ which documents each function), a small API kept stable:
   (`index.html` is imported by the server; no build step). `engine/` draws the game and sends the input back (a typed
   `GameScreen`, also the ?shot= and ?compare= picture pages); `shell/` is the header, rail, side panel and status
   strip; `panels/` one folder per panel; `sim/` the typed API client and the state store; `flavours/` what is
-  game-flavoured (classes, colours, loading screens), one file per flavour.
-- `src/cli/`: the scenario runner (`suite.ts`, the CLI `play.ts`), the picture tool, coverage, wowless and the
-  executable's build. `src/project/`: projects (their config, how one is found) and the results the runner returns.
-- `lua/`: the simulator itself.
+  game-flavoured (classes, races, colours), one file per flavour.
+- `src/cli/`: the scenario runner (`suite.ts`, the CLI `play.ts`), the picture tool, coverage and wowless.
+- `native/`: the native core in Rust (the scene's walk and layout, the stream's store), loaded by LuaJIT's FFI when
+  built (`bun run native`). `Dockerfile` and `docker/`: the image. `src/project/`: projects (their config, how one is found) and the results the runner returns.
+- `lua/`: the simulator itself (`lua/tests/`: its tests that need nothing of the game; `lua/vendor/`: LibDeflate).
+- `recorder/`: the recorder addon for the real game; `tools/`: the LuaJIT profilers and the probe; `types/`: the
+  scenario API's types for projects' editors; `docs/`: the SDK's guide, designs and the change notes.
 
 ## How a frame gets to the screen
 
@@ -285,10 +312,12 @@ before (`lua/stream.lua`): the items new or changed, and the drawing order when 
 every page over a WebSocket (`src/server/sceneStream.ts`, Bun's own WebSockets); a page that joins, or falls behind, is sent the whole scene first. A
 frame with the world map open is a few KB, not the whole scene's 120 KB.
 
-The page draws with the GPU (`src/ui/engine/renderers/gl.ts`, WebGL2): every item a few quads in one buffer, colour, alpha,
-greying, masks and clipping in the shader, each string laid out once with the game's fonts and kept as a texture.
-`?renderer=dom` draws with the page's own elements instead (as the picture pages do, and as the page does when the
-browser has no WebGL2). A new kind of item is one function in the renderer's `DRAWERS`.
+The page draws with the GPU (`src/ui/engine/renderers/renderer.ts`): every item a few quads in one buffer, colour,
+alpha, greying, blend modes, up to three masks (nine-sliced, with their wrap modes) and clipping in the shader, each
+string laid out once with the game's fonts and kept as a texture, all drawn with WebGPU (`webgpu.ts`: a browser
+without it is told so on the screen). The picture pages (`?shot=`, `?compare=`) and the screenshots (`addonsim shot`, the
+gallery) draw with the same renderer: headless Chrome is driven over DevTools and waits for the page to say "ready". A
+new kind of item is a case in the renderer's `draw`.
 
 The status bar shows how it keeps up: the game's frames a second and their time in the simulator, the worst frame of
 the last second split into the game's code (input and tick), the drawing list (export) and its changes written (send),
@@ -301,6 +330,6 @@ the frames is the whole export, and the rectangles kept are the ones worked out 
 
 ## Credits and licences
 
-See [CREDITS.md](CREDITS.md). AddonSim includes GPL-3.0 code (from Questie/QuestieDB), which a public release has to
-honour (there is no LICENSE file yet). The game's art, tables and interface source are fetched or read locally and
-never shipped with it.
+See [CREDITS.md](CREDITS.md). The only code of others AddonSim carries is LibDeflate (zlib License); its base64, hex,
+CBOR and gzip are its own (`lua/encoding.lua`). It has no licence of its own yet (no LICENSE file). The game's art,
+tables and interface source are fetched or read locally and never shipped with it.

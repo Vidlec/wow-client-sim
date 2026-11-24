@@ -19,7 +19,12 @@ const createPage = (buffered = 0): PageSocket & { sent: string[] } => {
 
 /** The host as publish uses it: its run, and the whole scene when asked */
 const createHost = (generation = 1): LuaHost =>
-  ({ generation, requestRaw: async () => '{"version":9,"whole":true}' }) as unknown as LuaHost;
+  ({
+    generation,
+    requestRaw: async () => '{"version":9,"whole":true}',
+    // (a JSON answer: no binary part, as without the native store)
+    requestWithBinary: async () => ({ text: '{"version":9,"whole":true}' }),
+  }) as unknown as LuaHost;
 
 describe("withGeneration", () => {
   test("adds the run to the object as written", () => {

@@ -23,8 +23,6 @@ import { pyFixed } from "./format.ts";
 import { guardRuns } from "./guardRuns.ts";
 import { DEFAULT_TIME_LIMIT, findScenario, playScenarios, runName, stopRuns } from "./suite.ts";
 
-export { playScenarios } from "./suite.ts";
-
 const FLAGS = new Set(["--update", "--each-character", "--coverage"]);
 
 const say = (text: string): void => {

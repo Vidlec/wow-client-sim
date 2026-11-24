@@ -129,7 +129,7 @@ export const VirtualPad = () => {
   const heldRef = useRef(held);
   heldRef.current = held;
 
-  // Open: the game is told a pad is there. Closed: everything let go, the sticks back in the middle.
+  // Open: the game is told a pad is there. Closed: everything let go, the sticks back in the middle, the pad gone.
   useEffect(() => {
     if (!isOpen) return;
     getGameScreen()?.sendInput({ type: "padConnected", isConnected: true, name: "Virtual gamepad" });
@@ -138,19 +138,20 @@ export const VirtualPad = () => {
       for (const name of heldRef.current) screen?.pressPad(name, false);
       screen?.movePadStick("Movement", 0, 0);
       screen?.movePadStick("Camera", 0, 0);
+      screen?.sendInput({ type: "padConnected", isConnected: false, name: "Virtual gamepad" });
       setHeld(new Set());
     };
   }, [isOpen]);
 
+  // (the game told outside the state's updater: React may run an updater twice)
   const toggleHold = useCallback((name: string): void => {
-    setHeld((before) => {
-      const next = new Set(before);
-      const isHeld = !next.has(name);
-      if (isHeld) next.add(name);
-      else next.delete(name);
-      getGameScreen()?.pressPad(name, isHeld);
-      return next;
-    });
+    const next = new Set(heldRef.current);
+    const isHeld = !next.has(name);
+    if (isHeld) next.add(name);
+    else next.delete(name);
+    heldRef.current = next;
+    getGameScreen()?.pressPad(name, isHeld);
+    setHeld(next);
   }, []);
 
   const startDrag = (event: ReactPointerEvent<HTMLDivElement>): void => {

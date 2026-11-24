@@ -40,7 +40,9 @@ close:SetPoint("TOPRIGHT", -6, -6)
 local closeText = close:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 closeText:SetPoint("CENTER")
 closeText:SetText("X")
-close:SetScript("OnClick", function() window:Hide() end)
+close:SetScript("OnClick", function()
+    window:Hide()
+end)
 window.close = close
 
 -- The lines listed: the quest log's titles, then lines of filler, so the list always scrolls
@@ -49,9 +51,13 @@ local function collectLines()
     wipe(lines)
     for index = 1, C_QuestLog.GetNumQuestLogEntries() do
         local info = C_QuestLog.GetInfo(index)
-        if info and not info.isHeader then lines[#lines + 1] = info.title end
+        if info and not info.isHeader then
+            lines[#lines + 1] = info.title
+        end
     end
-    for index = 1, 30 do lines[#lines + 1] = "Line " .. index end
+    for index = 1, 30 do
+        lines[#lines + 1] = "Line " .. index
+    end
 end
 
 local rows = {}
@@ -81,7 +87,9 @@ for index = 1, ROW_COUNT do
         GameTooltip:AddLine("Row " .. index, 1, 1, 1)
         GameTooltip:Show()
     end)
-    row:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    row:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
     row:SetScript("OnClick", function(self)
         selected = self.text:GetText()
         refresh()
@@ -102,7 +110,9 @@ end)
 -- Marks on the minimap, round its middle
 ns.marks = {}
 local function placeMarks()
-    if not Minimap or #ns.marks > 0 then return end
+    if not Minimap or #ns.marks > 0 then
+        return
+    end
     for index, offsetXY in ipairs(MARK_OFFSETS) do
         local mark = CreateFrame("Frame", nil, Minimap)
         mark:SetSize(12, 12)
@@ -118,7 +128,9 @@ local function placeMarks()
             GameTooltip:SetText("SimFixture mark " .. index)
             GameTooltip:Show()
         end)
-        mark:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        mark:SetScript("OnLeave", function()
+            GameTooltip:Hide()
+        end)
         ns.marks[index] = mark
     end
 end

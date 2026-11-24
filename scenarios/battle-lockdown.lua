@@ -14,7 +14,11 @@ listener:RegisterEvent("PLAYER_REGEN_ENABLED")
 listener:RegisterEvent("ADDON_ACTION_FORBIDDEN")
 local forbidden = {}
 listener:SetScript("OnEvent", function(_, event, _, functionName)
-    if event == "ADDON_ACTION_FORBIDDEN" then forbidden[#forbidden + 1] = functionName else lockdownAt[event] = G.InCombatLockdown() end
+    if event == "ADDON_ACTION_FORBIDDEN" then
+        forbidden[#forbidden + 1] = functionName
+    else
+        lockdownAt[event] = G.InCombatLockdown()
+    end
 end)
 
 expect(not G.InCombatLockdown(), "no lockdown before the fight")
@@ -27,8 +31,10 @@ expect(enemy(boar).inCombat, "the quilboar is in combat too")
 -- The scenario's own code is an addon's here: its protected calls are forbidden
 G.TargetUnit("nameplate1")
 G.CastSpellByID(78)
-expect(#forbidden == 2 and forbidden[1] == "TargetUnit()" and forbidden[2] == "CastSpellByID()", "an addon may not target or cast: "
-    .. table.concat(forbidden, ", "))
+expect(
+    #forbidden == 2 and forbidden[1] == "TargetUnit()" and forbidden[2] == "CastSpellByID()",
+    "an addon may not target or cast: " .. table.concat(forbidden, ", ")
+)
 expect(not G.UnitExists("target"), "and nothing was targeted")
 -- The player's own key does it
 key("TAB")

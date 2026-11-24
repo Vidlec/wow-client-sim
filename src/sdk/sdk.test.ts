@@ -1,18 +1,31 @@
 // The SDK end to end, as a script or a test uses it: a game in this process (createSim) on the simulator's own
 // project (its scenarios and the SimFixture addon). One game boots (2-3 s); the rest answers in milliseconds.
-import { afterAll, beforeAll, expect, test } from "bun:test";
+import { afterAll, beforeAll, test as bunTest, expect } from "bun:test";
 import { existsSync } from "node:fs";
 import { simulatorProject } from "../project/select.ts";
+import { resolveConfig } from "../server/config.ts";
+import { loadSettings } from "../server/settings.ts";
 import { createSim, type Sim } from "./index.ts";
+
+// A game needs the simulator set up on this machine (the interface source, the game's files cached, LuaJIT): where it
+// is not (CI), these are skipped
+const isSetUp = ((): boolean => {
+  try {
+    return resolveConfig(loadSettings({ isWritten: false })).interfaceRoot !== undefined;
+  } catch {
+    return false;
+  }
+})();
+const test = isSetUp ? bunTest : bunTest.skip;
 
 let sim: Sim;
 
 beforeAll(async () => {
-  sim = await createSim({ project: simulatorProject() });
+  if (isSetUp) sim = await createSim({ project: simulatorProject() });
 });
 
 afterAll(async () => {
-  await sim.close();
+  await sim?.close();
 });
 
 test("eval answers with values, and steps run in it", async () => {

@@ -33,7 +33,10 @@ local mapId = map:GetMapID()
 pad("PAD3")
 wait(0.3)
 local parent = G.C_Map.GetMapInfo(mapId).parentMapID
-expect(map:GetMapID() == parent, "X goes up to the parent map (" .. tostring(map:GetMapID()) .. ", " .. tostring(parent) .. ")")
+expect(
+    map:GetMapID() == parent,
+    "X goes up to the parent map (" .. tostring(map:GetMapID()) .. ", " .. tostring(parent) .. ")"
+)
 
 pad("PAD2")
 wait(0.3)
@@ -43,9 +46,12 @@ expect(not G.SoftCursor:IsShown(), "the soft cursor goes with it")
 -- With quests (a party member on them too, for the party's progress in their tooltips) and the quest panel open, the
 -- map opens with its focus in the quest list: the d-pad moves the game's cursor through it (each quest's tooltip
 -- shown as it goes), A opens a quest's details, B goes back, d-pad left goes to the map. No Lua error on the way.
-accept(844); accept(870); accept(871)
+accept(844)
+accept(870)
+accept(871)
 joinParty({ name = "Garrix", class = "WARRIOR", level = 14 })
-memberAccept("Garrix", 844); memberAccept("Garrix", 870)
+memberAccept("Garrix", 844)
+memberAccept("Garrix", 870)
 expect(G.GetCVar("questLogOpen") == "1", "the quest panel opens with the map, as the client's default has it")
 key("M")
 wait(0.5)
@@ -53,9 +59,14 @@ local navigation = G.SmartNavigation
 expect(G.QuestMapFrame:IsShown() and map:IsQuestFocused(), "the map opens with its focus in the quest list")
 local first = navigation.currentButton
 pad("PADDDOWN")
-expect(navigation.currentButton ~= nil and navigation.currentButton ~= first, "the d-pad moves the cursor in the quest list")
+expect(
+    navigation.currentButton ~= nil and navigation.currentButton ~= first,
+    "the d-pad moves the cursor in the quest list"
+)
 for _ = 1, 6 do
-    if navigation.currentButton and navigation.currentButton.questID then break end
+    if navigation.currentButton and navigation.currentButton.questID then
+        break
+    end
     pad("PADDDOWN")
 end
 expect(navigation.currentButton and navigation.currentButton.questID, "the cursor stands on a quest")

@@ -1,4 +1,5 @@
-// Cache files: written whole or not at all, since the Python server may read the same cache at the same time.
+// Cache files: written whole or not at all, since several processes (the server, the daemon, suite runs) read and write
+// the same cache at the same time.
 import { randomBytes } from "node:crypto";
 import { readFile, rename, rm, writeFile } from "node:fs/promises";
 

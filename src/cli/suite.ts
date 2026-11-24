@@ -66,7 +66,7 @@ const readTimings = (project: Project): Record<string, number> => {
   }
 };
 
-/** Written as Python's json.dump(indent=1, sort_keys=True) wrote it, so the file reads the same either way */
+/** Written with sorted keys and an indent of one (json.dump's indent=1, sort_keys=True), so its diffs stay small */
 const writeTimings = (project: Project, timings: Record<string, number>): void => {
   const sorted = Object.fromEntries(Object.entries(timings).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
   try {
